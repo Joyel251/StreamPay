@@ -58,7 +58,7 @@ export default function TestPythPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">🧪 Pyth API Test</h1>
+  <h1 className="text-4xl font-bold mb-8">Pyth API Test</h1>
 
         <button
           onClick={testPyth}
@@ -78,7 +78,7 @@ export default function TestPythPage() {
                   ${pyusdUsdResult.price.toFixed(4)}
                 </div>
                 <div className="bg-green-50 p-4 rounded text-sm">
-                  <p><strong>✅ Fetch Successful!</strong></p>
+                  <p><strong>Fetch Successful</strong></p>
                   <p className="mt-2"><strong>Timestamp:</strong> {pyusdUsdResult.timestamp}</p>
                   <p className="mt-2"><strong>Raw Price:</strong> {pyusdUsdResult.raw.price.price}</p>
                   <p><strong>Exponent:</strong> {pyusdUsdResult.raw.price.expo}</p>
@@ -87,7 +87,7 @@ export default function TestPythPage() {
               </div>
             ) : (
               <div className="bg-red-50 p-4 rounded text-red-700">
-                <p><strong>❌ Failed:</strong> {pyusdUsdResult.error}</p>
+                <p><strong>Request Failed:</strong> {pyusdUsdResult.error}</p>
               </div>
             )
           ) : (
@@ -105,7 +105,7 @@ export default function TestPythPage() {
                   ₱{usdPhpResult.price.toFixed(2)}
                 </div>
                 <div className="bg-green-50 p-4 rounded text-sm">
-                  <p><strong>✅ Fetch Successful!</strong></p>
+                  <p><strong>Fetch Successful</strong></p>
                   <p className="mt-2"><strong>Timestamp:</strong> {usdPhpResult.timestamp}</p>
                   <p className="mt-2"><strong>Raw Price:</strong> {usdPhpResult.raw.price.price}</p>
                   <p><strong>Exponent:</strong> {usdPhpResult.raw.price.expo}</p>
@@ -114,7 +114,7 @@ export default function TestPythPage() {
               </div>
             ) : (
               <div className="bg-red-50 p-4 rounded text-red-700">
-                <p><strong>❌ Failed:</strong> {usdPhpResult.error}</p>
+                <p><strong>Request Failed:</strong> {usdPhpResult.error}</p>
               </div>
             )
           ) : (
@@ -125,14 +125,14 @@ export default function TestPythPage() {
         {/* Cross Rate */}
         {pyusdUsdResult?.success && usdPhpResult?.success && (
           <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4">📊 Calculated Cross-Rate</h2>
+            <h2 className="text-2xl font-semibold mb-4">Calculated Cross-Rate</h2>
             <div className="text-4xl font-bold text-purple-600 mb-2">
               ₱{(pyusdUsdResult.price * usdPhpResult.price).toFixed(2)}
             </div>
             <p className="text-sm text-gray-600">
               PYUSD/PHP = {pyusdUsdResult.price.toFixed(4)} × {usdPhpResult.price.toFixed(2)} = {(pyusdUsdResult.price * usdPhpResult.price).toFixed(2)}
             </p>
-            <p className="text-xs text-green-600 mt-2">✅ Live calculation, not hardcoded!</p>
+            <p className="text-xs text-green-600 mt-2">Live calculation, not hardcoded.</p>
           </div>
         )}
       </div>

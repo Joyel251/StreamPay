@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import GradientBlinds from '@/components/GradientBlinds'
 import WalletButton from '@/components/WalletButton'
+import SplitText from '@/components/ui/SplitText'
+import { MorphingText } from '@/components/ui/morphing-text'
 
 export default function Home() {
   return (
@@ -29,11 +31,11 @@ export default function Home() {
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
         <header className="p-6 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-lg font-semibold text-white tracking-wide">SP</span>
             </div>
-            <span className="text-2xl font-bold text-white">StreamPay</span>
+            <span className="text-2xl font-semibold text-white tracking-tight">StreamPay</span>
           </div>
           <WalletButton />
         </header>
@@ -42,38 +44,44 @@ export default function Home() {
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Main Heading */}
-            <div className="space-y-4">
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-tight">
-                Get Paid for the Work You Do,
-                <br />
-                <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                  The Second You Do It
-                </span>
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
-                Real-time wage streaming powered by blockchain technology. 
-                Work, earn, withdraw—instantly.
+            <div className="space-y-6">
+              <SplitText
+                text="StreamPay"
+                tag="h1"
+                className="text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight"
+                delay={80}
+                duration={0.7}
+                from={{ opacity: 0, y: 60 }}
+                to={{ opacity: 1, y: 0 }}
+                textAlign="center"
+              />
+              <MorphingText
+                texts={['Get Paid for the Work You Do', 'The Second You Do It']}
+                className="text-white"
+              />
+              <p className="text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto">
+                Real-time wage streaming powered by blockchain technology. Work, earn, withdraw—instantly.
               </p>
             </div>
 
             {/* Features */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <div className="text-4xl mb-3">⚡</div>
-                <h3 className="text-xl font-semibold text-white mb-2">Instant Payments</h3>
-                <p className="text-gray-300 text-sm">Wages stream in real-time as you work. No more waiting for payday.</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Instant</p>
+                <h3 className="text-xl font-semibold text-white mb-2">Streaming Payroll</h3>
+                <p className="text-gray-300 text-sm">Income releases the moment work is completed, eliminating payroll delays.</p>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <div className="text-4xl mb-3">🔒</div>
-                <h3 className="text-xl font-semibold text-white mb-2">Secure Escrow</h3>
-                <p className="text-gray-300 text-sm">30% held in escrow for quality assurance. Protected by smart contracts.</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Accountability</p>
+                <h3 className="text-xl font-semibold text-white mb-2">Escrow-backed Assurance</h3>
+                <p className="text-gray-300 text-sm">Automated escrow enforces quality, releasing funds as milestones are approved.</p>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <div className="text-4xl mb-3">🌐</div>
-                <h3 className="text-xl font-semibold text-white mb-2">Global Access</h3>
-                <p className="text-gray-300 text-sm">PYUSD stablecoin with live exchange rates. Work from anywhere.</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Global</p>
+                <h3 className="text-xl font-semibold text-white mb-2">Multi-currency Ready</h3>
+                <p className="text-gray-300 text-sm">PYUSD settlement with live FX ensures teams can work and withdraw anywhere.</p>
               </div>
             </div>
 
@@ -84,8 +92,8 @@ export default function Home() {
                 className="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg overflow-hidden hover:scale-105 transition-transform"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  👨‍💼 Employee App
-                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  Employee App
+                  <span className="group-hover:translate-x-1 transition-transform" aria-hidden>-&gt;</span>
                 </span>
               </Link>
               
@@ -94,8 +102,8 @@ export default function Home() {
                 className="group relative px-8 py-4 bg-white/10 backdrop-blur-lg text-white font-semibold rounded-lg border border-white/20 hover:bg-white/20 transition-all"
               >
                 <span className="flex items-center justify-center gap-2">
-                  🏢 Employer Dashboard
-                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  Employer Dashboard
+                  <span className="group-hover:translate-x-1 transition-transform" aria-hidden>-&gt;</span>
                 </span>
               </Link>
               
@@ -104,8 +112,8 @@ export default function Home() {
                 className="group relative px-8 py-4 bg-white/10 backdrop-blur-lg text-white font-semibold rounded-lg border border-white/20 hover:bg-white/20 transition-all"
               >
                 <span className="flex items-center justify-center gap-2">
-                  👔 Manager Panel
-                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  Manager Panel
+                  <span className="group-hover:translate-x-1 transition-transform" aria-hidden>-&gt;</span>
                 </span>
               </Link>
             </div>
@@ -113,16 +121,16 @@ export default function Home() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-8 mt-16 pt-12 border-t border-white/20 max-w-3xl mx-auto">
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-white mb-1">⚡</div>
-                <div className="text-sm text-gray-400">Powered by Pyth Network</div>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-2">Network</p>
+                <div className="text-lg font-semibold text-white">Powered by Pyth</div>
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-white mb-1">🔐</div>
-                <div className="text-sm text-gray-400">Smart Contract Security</div>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-2">Security</p>
+                <div className="text-lg font-semibold text-white">Auditable Smart Contracts</div>
               </div>
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-white mb-1">💎</div>
-                <div className="text-sm text-gray-400">PYUSD Stablecoin</div>
+                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-2">Settlement</p>
+                <div className="text-lg font-semibold text-white">Backed by PYUSD Stablecoin</div>
               </div>
             </div>
           </div>

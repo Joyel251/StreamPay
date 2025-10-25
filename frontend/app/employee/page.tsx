@@ -99,8 +99,8 @@ export default function EmployeeApp() {
       // await write.clockIn()
       
       // TEMPORARY: Simulate for testing Pyth rates
-      setIsClockedIn(true)
-      setSuccess('✅ Clocked in successfully! (Simulated - waiting for contract deployment)')
+  setIsClockedIn(true)
+  setSuccess('Clocked in successfully. (Simulated - waiting for contract deployment)')
     } catch (err: any) {
       console.error('Clock in failed:', err)
       setError(err.message || 'Failed to clock in. Please try again.')
@@ -122,8 +122,8 @@ export default function EmployeeApp() {
       // await write.clockOut()
       
       // TEMPORARY: Simulate for testing Pyth rates
-      setIsClockedIn(false)
-      setSuccess('✅ Clocked out successfully! (Simulated - waiting for contract deployment)')
+  setIsClockedIn(false)
+  setSuccess('Clocked out successfully. (Simulated - waiting for contract deployment)')
     } catch (err: any) {
       console.error('Clock out failed:', err)
       setError(err.message || 'Failed to clock out. Please try again.')
@@ -158,7 +158,7 @@ export default function EmployeeApp() {
       // await write.withdraw(withdrawAmount, 0, '0x')
       
       // TEMPORARY: Simulate for testing Pyth rates
-      setSuccess(`✅ Withdrew ${withdrawAmount} PYUSD successfully! (Simulated - waiting for contract deployment)`)
+  setSuccess(`Withdrew ${withdrawAmount} PYUSD successfully. (Simulated - waiting for contract deployment)`)
       setWithdrawAmount('')
     } catch (err: any) {
       console.error('Withdrawal failed:', err)
@@ -208,7 +208,7 @@ export default function EmployeeApp() {
         {/* Error/Success Messages */}
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
-            <p className="text-red-700">❌ {error}</p>
+            <p className="text-red-700">{error}</p>
           </div>
         )}
         {success && (
@@ -220,7 +220,7 @@ export default function EmployeeApp() {
         {/* Wallet Connection Required */}
         {!isConnected && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6 text-center">
-            <p className="text-yellow-800 font-semibold mb-2">👛 Connect your wallet to continue</p>
+            <p className="text-yellow-800 font-semibold mb-2">Connect your wallet to continue</p>
             <p className="text-yellow-600 text-sm">Click the "Connect Wallet" button above to get started</p>
           </div>
         )}
@@ -228,7 +228,7 @@ export default function EmployeeApp() {
         {/* Live Exchange Rates */}
         <div className="bg-white border border-blue-200 rounded-lg p-4 mb-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            📊 Live Exchange Rates 
+            Live Exchange Rates 
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Pyth Network</span>
           </h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -253,7 +253,7 @@ export default function EmployeeApp() {
 
         {/* Clock In/Out */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-semibold mb-4">⏰ Time Clock</h2>
+          <h2 className="text-2xl font-semibold mb-4">Time Clock</h2>
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={handleClockIn}
@@ -266,7 +266,7 @@ export default function EmployeeApp() {
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {actionLoading ? '⏳ Processing...' : isClockedIn ? '✅ Clocked In' : '🟢 Clock In'}
+              {actionLoading ? 'Processing...' : isClockedIn ? 'Clocked In' : 'Clock In'}
             </button>
             <button
               onClick={handleClockOut}
@@ -277,7 +277,7 @@ export default function EmployeeApp() {
                   : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg transform hover:scale-105'
               }`}
             >
-              {actionLoading ? '⏳ Processing...' : '🔴 Clock Out'}
+              {actionLoading ? 'Processing...' : 'Clock Out'}
             </button>
           </div>
           {isClockedIn && (
@@ -293,7 +293,7 @@ export default function EmployeeApp() {
         {/* Balance Display */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">💰 Current Balance</h2>
+            <h2 className="text-2xl font-semibold">Current Balance</h2>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value as any)}
@@ -344,7 +344,7 @@ export default function EmployeeApp() {
 
         {/* Withdrawal */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4">💸 Withdraw Funds</h2>
+          <h2 className="text-2xl font-semibold mb-4">Withdraw Funds</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -374,7 +374,7 @@ export default function EmployeeApp() {
               disabled={!isConnected || actionLoading || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105"
             >
-              {actionLoading ? '⏳ Processing Withdrawal...' : '💸 Withdraw to Wallet'}
+              {actionLoading ? 'Processing Withdrawal...' : 'Withdraw to Wallet'}
             </button>
             
             <div className="bg-gray-50 rounded-lg p-3">
