@@ -2,30 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import WalletButton from '@/components/WalletButton'
-
-const GradientBlinds = dynamic(() => import('@/components/GradientBlinds'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-black" />,
-})
-
-const SplitText = dynamic(() => import('@/components/ui/SplitText'), {
-  ssr: false,
-})
-
-const SlicedText = dynamic(() => import('@/components/ui/SlicedText'), {
-  ssr: false,
-})
-
-const ShinyText = dynamic(() => import('@/components/ui/ShinyText'), {
-  ssr: false,
-})
-
-const MorphingText = dynamic(
-  () => import('@/components/ui/morphing-text').then((mod) => mod.MorphingText),
-  { ssr: false }
-)
+import GradientBlinds from '@/components/GradientBlinds'
+import SplitText from '@/components/ui/SplitText'
+import SlicedText from '@/components/ui/SlicedText'
+import ShinyText from '@/components/ui/ShinyText'
+import { MorphingText } from '@/components/ui/morphing-text'
+import FeaturesGrid from '@/components/sections/FeaturesGrid'
 
 const heroMorphTexts = [
   'Get Paid for the Work You Do',
@@ -94,6 +77,23 @@ const HeroHeading = ({ reduceMotion }: { reduceMotion: boolean }) => {
 
 export default function Home() {
   const reduceMotion = usePrefersReducedMotion()
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    // Mark as loaded immediately after mount
+    setIsLoaded(true)
+  }, [])
+
+  if (!isLoaded) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-black">
@@ -124,12 +124,12 @@ export default function Home() {
 
         {/* Hero Section */}
   <div className="flex-1 flex flex-col items-center justify-center px-8 text-center pt-40 pb-32">
-          <div className="max-w-5xl mx-auto space-y-8">
+          <div className="max-w-5xl mx-auto">
             {/* Main Heading */}
             <HeroHeading reduceMotion={reduceMotion} />
 
             {/* Supporting Copy */}
-            <div className="flex flex-col items-center gap-6 mt-40">
+            <div className="flex flex-col items-center gap-6 mt-48 md:mt-64">
               <ShinyText
                 text="Real-time wage streaming powered by blockchain technology."
                 speed={3}
@@ -143,24 +143,8 @@ export default function Home() {
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 max-w-4xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Instant</p>
-                <h3 className="text-xl font-semibold text-white mb-2">Streaming Payroll</h3>
-                <p className="text-gray-300 text-sm">Income releases the moment work is completed, eliminating payroll delays.</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Accountability</p>
-                <h3 className="text-xl font-semibold text-white mb-2">Escrow-backed Assurance</h3>
-                <p className="text-gray-300 text-sm">Automated escrow enforces quality, releasing funds as milestones are approved.</p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
-                <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Global</p>
-                <h3 className="text-xl font-semibold text-white mb-2">Multi-currency Ready</h3>
-                <p className="text-gray-300 text-sm">PYUSD settlement with live FX ensures teams can work and withdraw anywhere.</p>
-              </div>
+            <div className="mt-24">
+              <FeaturesGrid />
             </div>
 
             {/* CTA Buttons */}
