@@ -1,36 +1,181 @@
-/**
- * Person B: Pyth Network integration
- * TODO:
- * 1. Query PYUSD/USD price feed
- * 2. Query PYUSD/PHP price feed
- * 3. Query PYUSD/EUR price feed
- * 4. Real-time updates (every 5 seconds)
- */
+'use client'
+
+import { useState, useEffect } from 'react'
+import { HermesClient } from '@pythnetwork/hermes-client'
 
 const PYTH_ENDPOINT = process.env.NEXT_PUBLIC_PYTH_ENDPOINT || 'https://hermes.pyth.network'
 
-// Pyth price feed IDs (find correct ones from Pyth docs)
-const PRICE_FEEDS = {
-  'PYUSD/USD': '0x...', // TODO: Get correct feed ID
-  'PYUSD/PHP': '0x...',
-  'PYUSD/EUR': '0x...',
+// Pyth price feed IDs from .env
+export const PRICE_FEEDS = {
+  'PYUSD/USD': process.env.NEXT_PUBLIC_PYTH_PYUSD_USD || '',
+  'USD/PHP': process.env.NEXT_PUBLIC_PYTH_USD_PHP || '',
+} as const
+
+export type PriceFeedPair = keyof typeof PRICE_FEEDS
+
+interface PriceData {
+  price: number
+  expo: number
+  conf: number
+  publishTime: number
 }
 
-export async function getPythPrice(pair: keyof typeof PRICE_FEEDS): Promise<number> {
+// Initialize Hermes client
+const hermesClient = new HermesClient(PYTH_ENDPOINT)
+
+/**
+ * Fetch latest price from Pyth Network
+ * Returns the price as a number with proper decimal adjustment
+ */
+export async function getPythPrice(pair: PriceFeedPair): Promise<PriceData | null> {
   try {
-    // TODO: Implement Pyth API call
-    const response = await fetch(`${PYTH_ENDPOINT}/api/latest_price_feeds?ids[]=${PRICE_FEEDS[pair]}`)
-    const data = await response.json()
+    const feedId = PRICE_FEEDS[pair]
+    if (!feedId) {
+      console.error(`No feed ID configured for ${pair}`)
+      return null
+    }
+
+    // Get latest price updates
+    const priceFeeds = await hermesClient.getLatestPriceUpdates([feedId])
     
-    // Parse Pyth response and return price
-    return 1.0 // Placeholder
+    if (!priceFeeds?.parsed || priceFeeds.parsed.length === 0) {
+      console.error(`No price data returned for ${pair}`)
+      return null
+    }
+
+    const priceFeed = priceFeeds.parsed[0]
+    const priceRaw = Number(priceFeed.price.price)
+    const expo = priceFeed.price.expo
+    const conf = Number(priceFeed.price.conf)
+    const publishTime = priceFeed.price.publish_time
+
+    // Calculate actual price: price * 10^expo
+    const price = priceRaw * Math.pow(10, expo)
+
+    return {
+      price,
+      expo,
+      conf: conf * Math.pow(10, expo),
+      publishTime,
+    }
   } catch (error) {
-    console.error('Error fetching Pyth price:', error)
-    return 1.0
+    console.error(`Error fetching Pyth price for ${pair}:`, error)
+    return null
   }
 }
 
-export function usePythPrice(pair: keyof typeof PRICE_FEEDS) {
-  // TODO: Implement React hook for real-time price updates
-  // Use useEffect with setInterval to update every 5 seconds
+/**
+ * Calculate PYUSD/PHP exchange rate using cross-rate
+ * PYUSD/PHP = PYUSD/USD * USD/PHP
+ */
+export async function getPYUSDtoPHP(): Promise<number> {
+  try {
+    const [pyusdUsd, usdPhp] = await Promise.all([
+      getPythPrice('PYUSD/USD'),
+      getPythPrice('USD/PHP'),
+    ])
+
+    if (!pyusdUsd || !usdPhp) {
+      console.error('Failed to fetch required price feeds for PYUSD/PHP')
+      return 56.0 // Fallback rate
+    }
+
+    const rate = pyusdUsd.price * usdPhp.price
+    return rate
+  } catch (error) {
+    console.error('Error calculating PYUSD/PHP rate:', error)
+    return 56.0 // Fallback rate
+  }
+}
+
+/**
+ * React hook for real-time price updates
+ * Refreshes every 5 seconds
+ */
+export function usePythPrice(pair: PriceFeedPair, refreshIntervalMs = 5000) {
+  const [priceData, setPriceData] = useState<PriceData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchPrice = async () => {
+      try {
+        const data = await getPythPrice(pair)
+        if (isMounted) {
+          setPriceData(data)
+          setLoading(false)
+          setError(null)
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch price')
+          setLoading(false)
+        }
+      }
+    }
+
+    // Initial fetch
+    fetchPrice()
+
+    // Set up interval for updates
+    const interval = setInterval(fetchPrice, refreshIntervalMs)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [pair, refreshIntervalMs])
+
+  return { priceData, loading, error }
+}
+
+/**
+ * React hook for PYUSD/PHP cross rate with real-time updates
+ */
+export function usePYUSDtoPHP(refreshIntervalMs = 5000) {
+  const [rate, setRate] = useState<number>(56.0) // Default fallback
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchRate = async () => {
+      try {
+        const calculatedRate = await getPYUSDtoPHP()
+        if (isMounted) {
+          setRate(calculatedRate)
+          setLoading(false)
+          setError(null)
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch rate')
+          setLoading(false)
+        }
+      }
+    }
+
+    // Initial fetch
+    fetchRate()
+
+    // Set up interval for updates
+    const interval = setInterval(fetchRate, refreshIntervalMs)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [refreshIntervalMs])
+
+  return { rate, loading, error }
+}
+
+/**
+ * Format price for display with proper decimals
+ */
+export function formatPrice(price: number, decimals = 4): string {
+  return price.toFixed(decimals)
 }

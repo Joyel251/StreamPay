@@ -45,3 +45,8 @@ typechain-types/
 # Misc
 *.tsbuildinfo
 .eslintcache
+
+# Documentation (except README.md)
+*.md
+!README.md
+test-pyth-feeds.js
