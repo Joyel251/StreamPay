@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
-import GradientBlinds from '@/components/GradientBlinds'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePYUSDtoPHP, usePythPrice, formatPrice } from '@/lib/pyth'
 // import { useContract } from '@/lib/hooks/useContract' // TODO: Uncomment when contract is deployed
+
+// Lazy load heavy components
+const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 /**
  * Employee Dashboard - Complete Implementation
@@ -26,6 +29,7 @@ export default function EmployeeApp() {
   const [isClockedIn, setIsClockedIn] = useState(false)
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [currency, setCurrency] = useState<'PYUSD' | 'USD' | 'PHP'>('PYUSD')
+  const [isPageLoading, setIsPageLoading] = useState(true)
   
   // Loading & error states
   const [balanceLoading, setBalanceLoading] = useState(false)
@@ -36,6 +40,14 @@ export default function EmployeeApp() {
   // Fetch live Pyth price feeds (updates every 5 seconds)
   const { priceData: pyusdUsdData, loading: pyusdLoading } = usePythPrice('PYUSD/USD')
   const { rate: pyusdPhpRate, loading: phpLoading } = usePYUSDtoPHP()
+
+  // Simulate page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Fetch employee balance from contract (real-time updates)
   useEffect(() => {
@@ -192,25 +204,32 @@ export default function EmployeeApp() {
     return ''
   }
 
+  if (isPageLoading) {
+    return <LoadingSpinner message="Loading Employee Dashboard..." />
+  }
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-black">
       {/* GradientBlinds Background */}
-      <div className="absolute inset-0 z-0">
-        <GradientBlinds
-          gradientColors={['#FF9FFC', '#5227FF']}
-          angle={45}
-          noise={0.3}
-          blindCount={12}
-          blindMinWidth={50}
-          spotlightRadius={0.2}
-          spotlightSoftness={1}
-          spotlightOpacity={1}
-          mouseDampening={0.15}
-          distortAmount={50}
-          shineDirection="left"
-          mixBlendMode="lighten"
-        />
-      </div>
+      <Suspense fallback={<div className="absolute inset-0 bg-black" />}>
+        <div className="absolute inset-0 z-0">
+          <GradientBlinds
+            gradientColors={['#FF9FFC', '#5227FF']}
+            angle={45}
+            noise={0.3}
+            blindCount={12}
+            blindMinWidth={50}
+            spotlightRadius={0.3}
+            spotlightSoftness={1}
+            spotlightOpacity={0.8}
+            mouseDampening={0}
+            distortAmount={50}
+            shineDirection="left"
+            mixBlendMode="lighten"
+            paused={false}
+          />
+        </div>
+      </Suspense>
 
       {/* Content Overlay */}
       <div className="relative z-10 min-h-screen">

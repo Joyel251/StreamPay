@@ -12,7 +12,7 @@ import FeaturesGrid from '@/components/sections/FeaturesGrid'
 
 const heroMorphTexts = [
   'Get paid the second you finish',
-  'Skip the wait. Secure your pay',
+  'Skip the wait Secure your pay!!',
 ]
 
 const usePrefersReducedMotion = () => {
