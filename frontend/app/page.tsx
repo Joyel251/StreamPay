@@ -1,12 +1,100 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import GradientBlinds from '@/components/GradientBlinds'
+import dynamic from 'next/dynamic'
 import WalletButton from '@/components/WalletButton'
-import SplitText from '@/components/ui/SplitText'
-import { MorphingText } from '@/components/ui/morphing-text'
+
+const GradientBlinds = dynamic(() => import('@/components/GradientBlinds'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-black" />,
+})
+
+const SplitText = dynamic(() => import('@/components/ui/SplitText'), {
+  ssr: false,
+})
+
+const SlicedText = dynamic(() => import('@/components/ui/SlicedText'), {
+  ssr: false,
+})
+
+const ShinyText = dynamic(() => import('@/components/ui/ShinyText'), {
+  ssr: false,
+})
+
+const MorphingText = dynamic(
+  () => import('@/components/ui/morphing-text').then((mod) => mod.MorphingText),
+  { ssr: false }
+)
+
+const heroMorphTexts = [
+  'Get Paid for the Work You Do',
+  'The Second You Do It',
+]
+
+const usePrefersReducedMotion = () => {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('matchMedia' in window)) return
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches)
+    setPrefersReducedMotion(media.matches)
+    if (media.addEventListener) media.addEventListener('change', handleChange)
+    else media.addListener(handleChange)
+    return () => {
+      if (media.removeEventListener) media.removeEventListener('change', handleChange)
+      else media.removeListener(handleChange)
+    }
+  }, [])
+
+  return prefersReducedMotion
+}
+
+const HeroHeading = ({ reduceMotion }: { reduceMotion: boolean }) => {
+  const [showSplit, setShowSplit] = useState(true)
+
+  return (
+    <div className="flex flex-col items-center text-center gap-6">
+      {showSplit ? (
+        <SplitText
+          text="StreamPay"
+          tag="h1"
+          className="text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight"
+          delay={80}
+          duration={0.7}
+          from={{ opacity: 0, y: 60 }}
+          to={{ opacity: 1, y: 0 }}
+          textAlign="center"
+          onLetterAnimationComplete={() => setShowSplit(false)}
+        />
+      ) : (
+        <SlicedText
+          text="StreamPay"
+          className="text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight"
+          containerClassName="max-w-fit mx-auto"
+          splitSpacing={6}
+        />
+      )}
+
+      <div className="w-full">
+        {reduceMotion ? (
+          <p className="text-3xl md:text-4xl font-semibold text-white leading-tight">
+            Get Paid for the Work You Do
+            <br className="hidden md:block" />
+            <span className="block md:inline">The Second You Do It</span>
+          </p>
+        ) : (
+          <MorphingText texts={heroMorphTexts} className="text-white" />
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
+  const reduceMotion = usePrefersReducedMotion()
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-black">
       {/* GradientBlinds Background */}
@@ -17,11 +105,11 @@ export default function Home() {
           noise={0.3}
           blindCount={12}
           blindMinWidth={50}
-          spotlightRadius={0.5}
+          spotlightRadius={0.2}
           spotlightSoftness={1}
           spotlightOpacity={1}
           mouseDampening={0.15}
-          distortAmount={0}
+          distortAmount={50}
           shineDirection="left"
           mixBlendMode="lighten"
         />
@@ -30,42 +118,32 @@ export default function Home() {
       {/* Content Overlay */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="p-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-semibold text-white tracking-wide">SP</span>
-            </div>
-            <span className="text-2xl font-semibold text-white tracking-tight">StreamPay</span>
-          </div>
+        <header className="p-6 flex justify-end items-center">
           <WalletButton />
         </header>
 
         {/* Hero Section */}
-        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+  <div className="flex-1 flex flex-col items-center justify-center px-8 text-center pt-40 pb-32">
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Main Heading */}
-            <div className="space-y-6">
-              <SplitText
-                text="StreamPay"
-                tag="h1"
-                className="text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight"
-                delay={80}
-                duration={0.7}
-                from={{ opacity: 0, y: 60 }}
-                to={{ opacity: 1, y: 0 }}
-                textAlign="center"
+            <HeroHeading reduceMotion={reduceMotion} />
+
+            {/* Supporting Copy */}
+            <div className="flex flex-col items-center gap-6 mt-40">
+              <ShinyText
+                text="Real-time wage streaming powered by blockchain technology."
+                speed={3}
+                disabled={reduceMotion}
+                className="text-base md:text-lg lg:text-xl tracking-wide"
               />
-              <MorphingText
-                texts={['Get Paid for the Work You Do', 'The Second You Do It']}
-                className="text-white"
-              />
-              <p className="text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto">
-                Real-time wage streaming powered by blockchain technology. Work, earn, withdraw—instantly.
+
+              <p className="text-xl md:text-2xl text-gray-200 max-w-3xl leading-relaxed text-center">
+                Work, earn, and withdraw on your schedule with settlement secured on-chain.
               </p>
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 max-w-4xl mx-auto">
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all">
                 <p className="text-xs uppercase tracking-[0.3em] text-blue-200 mb-3">Instant</p>
                 <h3 className="text-xl font-semibold text-white mb-2">Streaming Payroll</h3>
