@@ -11,8 +11,8 @@ import { MorphingText } from '@/components/ui/morphing-text'
 import FeaturesGrid from '@/components/sections/FeaturesGrid'
 
 const heroMorphTexts = [
-  'Get Paid for the Work You Do',
-  'The Second You Do It',
+  'Get paid the second you finish',
+  'Skip the wait. Secure your pay',
 ]
 
 const usePrefersReducedMotion = () => {
@@ -77,23 +77,6 @@ const HeroHeading = ({ reduceMotion }: { reduceMotion: boolean }) => {
 
 export default function Home() {
   const reduceMotion = usePrefersReducedMotion()
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    // Mark as loaded immediately after mount
-    setIsLoaded(true)
-  }, [])
-
-  if (!isLoaded) {
-    return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-black">
