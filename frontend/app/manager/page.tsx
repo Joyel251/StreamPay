@@ -1,6 +1,6 @@
 'use client'
 
-import { ConnectKitButton } from 'connectkit'
+import WalletButton from '@/components/WalletButton'
 
 /**
  * Person B: Manager Panel
@@ -32,7 +32,7 @@ export default function ManagerPanel() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Manager Panel</h1>
-          <ConnectKitButton />
+          <WalletButton />
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">

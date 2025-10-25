@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ConnectKitButton } from 'connectkit'
+import WalletButton from '@/components/WalletButton'
 
 /**
  * Person B: Employee App
@@ -55,7 +55,7 @@ export default function EmployeeApp() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Employee App</h1>
-          <ConnectKitButton />
+          <WalletButton />
         </div>
 
         {/* Clock In/Out */}

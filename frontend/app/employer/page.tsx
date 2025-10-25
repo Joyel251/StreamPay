@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ConnectKitButton } from 'connectkit'
+import WalletButton from '@/components/WalletButton'
 
 /**
  * Person B: Employer Dashboard
@@ -32,7 +32,7 @@ export default function EmployerDashboard() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Employer Dashboard</h1>
-          <ConnectKitButton />
+          <WalletButton />
         </div>
 
         {/* Deposit Section */}
