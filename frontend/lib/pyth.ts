@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { HermesClient } from '@pythnetwork/hermes-client'
 
 const PYTH_ENDPOINT = process.env.NEXT_PUBLIC_PYTH_ENDPOINT || 'https://hermes.pyth.network'
 
@@ -10,6 +9,11 @@ export const PRICE_FEEDS = {
   'PYUSD/USD': process.env.NEXT_PUBLIC_PYTH_PYUSD_USD || '',
   'USD/PHP': process.env.NEXT_PUBLIC_PYTH_USD_PHP || '',
 } as const
+
+// Debug: Log feed IDs on initialization (client-side only)
+if (typeof window !== 'undefined') {
+  console.log('Pyth Feed IDs loaded:', PRICE_FEEDS)
+}
 
 export type PriceFeedPair = keyof typeof PRICE_FEEDS
 
@@ -20,11 +24,8 @@ interface PriceData {
   publishTime: number
 }
 
-// Initialize Hermes client
-const hermesClient = new HermesClient(PYTH_ENDPOINT)
-
 /**
- * Fetch latest price from Pyth Network
+ * Fetch latest price from Pyth Network using direct HTTP calls
  * Returns the price as a number with proper decimal adjustment
  */
 export async function getPythPrice(pair: PriceFeedPair): Promise<PriceData | null> {
@@ -35,15 +36,31 @@ export async function getPythPrice(pair: PriceFeedPair): Promise<PriceData | nul
       return null
     }
 
-    // Get latest price updates
-    const priceFeeds = await hermesClient.getLatestPriceUpdates([feedId])
+    // Remove 0x prefix if present
+    const cleanFeedId = feedId.startsWith('0x') ? feedId.slice(2) : feedId
+
+    console.log(`Fetching ${pair} with feed ID:`, cleanFeedId)
+
+    // Use Hermes HTTP API directly
+    const url = `${PYTH_ENDPOINT}/v2/updates/price/latest?ids[]=${cleanFeedId}`
+    console.log(`Fetching URL:`, url)
+
+    const response = await fetch(url)
     
-    if (!priceFeeds?.parsed || priceFeeds.parsed.length === 0) {
+    if (!response.ok) {
+      console.error(`HTTP error for ${pair}:`, response.status, response.statusText)
+      return null
+    }
+
+    const data = await response.json()
+    console.log(`Response for ${pair}:`, data)
+    
+    if (!data?.parsed || data.parsed.length === 0) {
       console.error(`No price data returned for ${pair}`)
       return null
     }
 
-    const priceFeed = priceFeeds.parsed[0]
+    const priceFeed = data.parsed[0]
     const priceRaw = Number(priceFeed.price.price)
     const expo = priceFeed.price.expo
     const conf = Number(priceFeed.price.conf)
@@ -51,6 +68,8 @@ export async function getPythPrice(pair: PriceFeedPair): Promise<PriceData | nul
 
     // Calculate actual price: price * 10^expo
     const price = priceRaw * Math.pow(10, expo)
+
+    console.log(`${pair} price calculated:`, price)
 
     return {
       price,
