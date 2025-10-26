@@ -46,8 +46,9 @@ export function useContract() {
       const tx = await contract.deposit(parseUnits(amount, 18))
       await tx.wait()
       return tx
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
@@ -62,8 +63,9 @@ export function useContract() {
       const tx = await contract.addEmployee(employeeAddress, parseUnits(annualSalary, 18))
       await tx.wait()
       return tx
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
@@ -79,8 +81,9 @@ export function useContract() {
       const tx = await contract.clockIn()
       await tx.wait()
       return tx
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
@@ -95,8 +98,9 @@ export function useContract() {
       const tx = await contract.clockOut()
       await tx.wait()
       return tx
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
@@ -112,8 +116,9 @@ export function useContract() {
       const tx = await contract.withdraw(parseUnits(amount, 18), nonce, signature)
       await tx.wait()
       return tx
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
@@ -126,7 +131,7 @@ export function useContract() {
     try {
       const balance = await contract.getEmployeeBalance(employeeAddress)
       return formatUnits(balance, 18)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to get balance:', err)
       return '0'
     }
@@ -142,7 +147,7 @@ export function useContract() {
         lastClockIn: info.lastClockIn.toString(),
         totalEarned: formatUnits(info.totalEarned, 18),
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to get employee info:', err)
       return null
     }
@@ -153,7 +158,7 @@ export function useContract() {
     try {
       const balance = await contract.getContractBalance()
       return formatUnits(balance, 18)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to get contract balance:', err)
       return '0'
     }

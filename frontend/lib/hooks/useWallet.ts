@@ -11,6 +11,20 @@ export function useWallet() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const handleAccountsChanged = (accounts: string[]) => {
+    if (accounts.length === 0) {
+      disconnectWallet()
+    } else {
+      setAccount(accounts[0])
+    }
+  }
+
+  const handleChainChanged = () => {
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
+  }
+
   // Listen for account/chain changes when MetaMask exists
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -25,6 +39,7 @@ export function useWallet() {
       ethProvider.removeListener('accountsChanged', handleAccountsChanged)
       ethProvider.removeListener('chainChanged', handleChainChanged)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const connectWallet = async () => {
@@ -68,8 +83,9 @@ export function useWallet() {
       setProvider(provider)
       setSigner(signer)
       setChainId(Number(network.chainId))
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect wallet')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet'
+      setError(errorMessage)
       console.error('Error connecting wallet:', err)
     } finally {
       setIsConnecting(false)
@@ -95,9 +111,10 @@ export function useWallet() {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0xaa36a7' }], // Sepolia chainId in hex
       })
-    } catch (err: any) {
+    } catch (err) {
+      const errorCode = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : null
       // Chain not added, add it
-      if (err.code === 4902) {
+      if (errorCode === 4902) {
         try {
           await ethProvider.request({
             method: 'wallet_addEthereumChain',
@@ -117,20 +134,6 @@ export function useWallet() {
           console.error('Error adding Sepolia:', addError)
         }
       }
-    }
-  }
-
-  const handleAccountsChanged = (accounts: string[]) => {
-    if (accounts.length === 0) {
-      disconnectWallet()
-    } else {
-      setAccount(accounts[0])
-    }
-  }
-
-  const handleChainChanged = () => {
-    if (typeof window !== 'undefined') {
-      window.location.reload()
     }
   }
 

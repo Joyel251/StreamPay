@@ -17,7 +17,6 @@ const config = createConfig(
       [sepolia.id]: http(rpcUrl),
     },
     walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-    autoConnect: false,
   })
 )
 

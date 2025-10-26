@@ -2,9 +2,26 @@
 
 import { useState } from 'react'
 
+interface PythPriceData {
+  price: {
+    price: string
+    expo: number
+    conf: string
+    publish_time: number
+  }
+}
+
+interface PriceResult {
+  success: boolean
+  price?: number
+  raw?: PythPriceData
+  timestamp?: string
+  error?: string
+}
+
 export default function TestPythPage() {
-  const [pyusdUsdResult, setPyusdUsdResult] = useState<any>(null)
-  const [usdPhpResult, setUsdPhpResult] = useState<any>(null)
+  const [pyusdUsdResult, setPyusdUsdResult] = useState<PriceResult | null>(null)
+  const [usdPhpResult, setUsdPhpResult] = useState<PriceResult | null>(null)
   const [loading, setLoading] = useState(false)
 
   const testPyth = async () => {
@@ -27,8 +44,8 @@ export default function TestPythPage() {
       } else {
         setPyusdUsdResult({ success: false, error: 'No data' })
       }
-    } catch (error: any) {
-      setPyusdUsdResult({ success: false, error: error.message })
+    } catch (error) {
+      setPyusdUsdResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
     }
 
     // Test USD/PHP
@@ -48,8 +65,8 @@ export default function TestPythPage() {
       } else {
         setUsdPhpResult({ success: false, error: 'No data' })
       }
-    } catch (error: any) {
-      setUsdPhpResult({ success: false, error: error.message })
+    } catch (error) {
+      setUsdPhpResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error' })
     }
 
     setLoading(false)
@@ -75,14 +92,18 @@ export default function TestPythPage() {
             pyusdUsdResult.success ? (
               <div>
                 <div className="text-4xl font-bold text-green-600 mb-4">
-                  ${pyusdUsdResult.price.toFixed(4)}
+                  ${pyusdUsdResult.price?.toFixed(4) ?? 'N/A'}
                 </div>
                 <div className="bg-green-50 p-4 rounded text-sm">
                   <p><strong>Fetch Successful</strong></p>
                   <p className="mt-2"><strong>Timestamp:</strong> {pyusdUsdResult.timestamp}</p>
-                  <p className="mt-2"><strong>Raw Price:</strong> {pyusdUsdResult.raw.price.price}</p>
-                  <p><strong>Exponent:</strong> {pyusdUsdResult.raw.price.expo}</p>
-                  <p><strong>Confidence:</strong> {pyusdUsdResult.raw.price.conf}</p>
+                  {pyusdUsdResult.raw && (
+                    <>
+                      <p className="mt-2"><strong>Raw Price:</strong> {pyusdUsdResult.raw.price.price}</p>
+                      <p><strong>Exponent:</strong> {pyusdUsdResult.raw.price.expo}</p>
+                      <p><strong>Confidence:</strong> {pyusdUsdResult.raw.price.conf}</p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -91,7 +112,7 @@ export default function TestPythPage() {
               </div>
             )
           ) : (
-            <p className="text-gray-500">Click "Test Pyth API" to fetch</p>
+            <p className="text-gray-500">Click &quot;Test Pyth API&quot; to fetch</p>
           )}
         </div>
 
@@ -102,14 +123,18 @@ export default function TestPythPage() {
             usdPhpResult.success ? (
               <div>
                 <div className="text-4xl font-bold text-green-600 mb-4">
-                  ₱{usdPhpResult.price.toFixed(2)}
+                  ₱{usdPhpResult.price?.toFixed(2) ?? 'N/A'}
                 </div>
                 <div className="bg-green-50 p-4 rounded text-sm">
                   <p><strong>Fetch Successful</strong></p>
                   <p className="mt-2"><strong>Timestamp:</strong> {usdPhpResult.timestamp}</p>
-                  <p className="mt-2"><strong>Raw Price:</strong> {usdPhpResult.raw.price.price}</p>
-                  <p><strong>Exponent:</strong> {usdPhpResult.raw.price.expo}</p>
-                  <p><strong>Confidence:</strong> {usdPhpResult.raw.price.conf}</p>
+                  {usdPhpResult.raw && (
+                    <>
+                      <p className="mt-2"><strong>Raw Price:</strong> {usdPhpResult.raw.price.price}</p>
+                      <p><strong>Exponent:</strong> {usdPhpResult.raw.price.expo}</p>
+                      <p><strong>Confidence:</strong> {usdPhpResult.raw.price.conf}</p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -118,12 +143,12 @@ export default function TestPythPage() {
               </div>
             )
           ) : (
-            <p className="text-gray-500">Click "Test Pyth API" to fetch</p>
+            <p className="text-gray-500">Click &quot;Test Pyth API&quot; to fetch</p>
           )}
         </div>
 
         {/* Cross Rate */}
-        {pyusdUsdResult?.success && usdPhpResult?.success && (
+        {pyusdUsdResult?.success && usdPhpResult?.success && pyusdUsdResult.price && usdPhpResult.price && (
           <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-6">
             <h2 className="text-2xl font-semibold mb-4">Calculated Cross-Rate</h2>
             <div className="text-4xl font-bold text-purple-600 mb-2">
