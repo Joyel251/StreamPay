@@ -1,0 +1,36 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "timestamp": "2025-10-26T05:29:52.097Z",
+  "deployer": "0x921243C20Cef1b31594e7a3AdcCAB005Ee0BDB20",
+  "contracts": {
+    "PYUSD": {
+      "address": "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+      "note": "Official PYUSD Sepolia Testnet Contract",
+      "type": "Official",
+      "decimals": 6,
+      "explorerUrl": "https://sepolia.etherscan.io/token/0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9"
+    },
+    "StreamingVault": {
+      "address": "0xc63d7425d5f3960EdAB8A28AdF2468c89d3BBE3c",
+      "note": "Main wage streaming contract",
+      "verifyCommand": "npx hardhat verify --network sepolia 0xc63d7425d5f3960EdAB8A28AdF2468c89d3BBE3c 0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+      "explorerUrl": "https://sepolia.etherscan.io/address/0xc63d7425d5f3960EdAB8A28AdF2468c89d3BBE3c"
+    }
+  },
+  "setup": {
+    "pyusdBalance": "100.0",
+    "vaultFunded": true,
+    "demoEmployeeAdded": false
+  },
+  "frontend": {
+    "NEXT_PUBLIC_CONTRACT_ADDRESS": "0xc63d7425d5f3960EdAB8A28AdF2468c89d3BBE3c",
+    "NEXT_PUBLIC_PYUSD_ADDRESS": "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9",
+    "NEXT_PUBLIC_CHAIN_ID": "11155111"
+  },
+  "instructions": {
+    "getPYUSD": "Get testnet PYUSD from PayPal developer portal or faucet",
+    "fundVault": "Use deposit() function to add PYUSD to vault",
+    "addEmployee": "Use addEmployee() to add workers with annual salary"
+  }
+}
