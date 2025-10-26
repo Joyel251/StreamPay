@@ -106,6 +106,12 @@ export default function EmployerDashboard() {
       return
     }
 
+    // Check if contract is initialized
+    if (!write.approvePYUSD || !write.deposit) {
+      setError('Contract not initialized. Please wait and try again.')
+      return
+    }
+
     setActionLoading(true)
     setError(null)
     try {
@@ -160,6 +166,12 @@ export default function EmployerDashboard() {
 
     if (parseFloat(annualSalary) <= 0) {
       setError('Annual salary must be greater than 0')
+      return
+    }
+
+    // Check if contract is initialized
+    if (!write.addEmployee) {
+      setError('Contract not initialized. Please wait and try again.')
       return
     }
 

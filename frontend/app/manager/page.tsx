@@ -31,6 +31,7 @@ export default function ManagerPanel() {
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -58,11 +59,16 @@ export default function ManagerPanel() {
   useEffect(() => {
     if (!isConnected || !address) {
       setEmployees([])
+      setInitialLoad(false)
       return
     }
 
     const fetchEmployees = async () => {
-      setLoadingEmployees(true)
+      // Only show loading spinner on initial load
+      if (initialLoad) {
+        setLoadingEmployees(true)
+      }
+      
       try {
         // Check if read functions are available
         if (!read.getAllEmployees || !read.getEmployeeDetails) {
@@ -90,6 +96,10 @@ export default function ManagerPanel() {
 
         const employeeData = (await Promise.all(employeePromises)).filter(Boolean) as EmployeeData[]
         setEmployees(employeeData)
+        
+        if (initialLoad) {
+          setInitialLoad(false)
+        }
       } catch (err) {
         console.error('Failed to fetch employees:', err)
         // Only show error if it's not a "not initialized" error
@@ -97,7 +107,9 @@ export default function ManagerPanel() {
           setError('Failed to load employee data from contract')
         }
       } finally {
-        setLoadingEmployees(false)
+        if (initialLoad) {
+          setLoadingEmployees(false)
+        }
       }
     }
 
@@ -106,11 +118,17 @@ export default function ManagerPanel() {
     // Refresh every 10 seconds
     const interval = setInterval(fetchEmployees, 10000)
     return () => clearInterval(interval)
-  }, [isConnected, address, read])
+  }, [isConnected, address, read, initialLoad])
 
   const handleApprove = async (employeeAddress: string) => {
     if (!isConnected) {
       setError('Please connect your wallet first')
+      return
+    }
+
+    // Check if contract is initialized
+    if (!write.approveEscrow) {
+      setError('Contract not initialized. Please wait and try again.')
       return
     }
 
@@ -157,6 +175,12 @@ export default function ManagerPanel() {
     
     if (employeesWithEscrow.length === 0) {
       setError('No employees with pending escrow')
+      return
+    }
+
+    // Check if contract is initialized
+    if (!write.batchApproveEscrow) {
+      setError('Contract not initialized. Please wait and try again.')
       return
     }
 

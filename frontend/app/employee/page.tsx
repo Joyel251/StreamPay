@@ -123,6 +123,12 @@ export default function EmployeeApp() {
       return
     }
 
+    // Check if contract is initialized
+    if (!write.clockIn) {
+      setError('Contract not initialized. Please wait and try again.')
+      return
+    }
+
     setActionLoading(true)
     setError(null)
     try {
@@ -142,6 +148,12 @@ export default function EmployeeApp() {
   const handleClockOut = async () => {
     if (!isConnected) {
       setError('Please connect your wallet first')
+      return
+    }
+
+    // Check if contract is initialized
+    if (!write.clockOut) {
+      setError('Contract not initialized. Please wait and try again.')
       return
     }
 
@@ -175,6 +187,12 @@ export default function EmployeeApp() {
 
     if (amount > availableBalance) {
       setError(`Insufficient balance. Max available: ${formatPrice(availableBalance, 4)} PYUSD`)
+      return
+    }
+
+    // Check if contract is initialized
+    if (!write.withdraw) {
+      setError('Contract not initialized. Please wait and try again.')
       return
     }
 
