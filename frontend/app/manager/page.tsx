@@ -1,22 +1,39 @@
 'use client'
 
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { useContract } from '@/lib/hooks/useContract' // ✅ NOW USING REAL CONTRACT
 
 // Lazy load heavy components
 const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
+interface EmployeeData {
+  address: string
+  name: string
+  escrowBalance: number
+  isActive: boolean
+  isClockedIn: boolean
+}
+
 /**
- * Person B: Manager Panel
- * TODO:
- * 1. List all employees with pending escrow
- * 2. Show hours worked this week
- * 3. Approve/reject individual or batch
+ * Manager Panel - REAL CONTRACT INTEGRATION ✅
+ * - List all employees with pending escrow
+ * - Show real escrow balances from contract
+ * - Approve individual or batch escrow releases
  */
 
 export default function ManagerPanel() {
+  const { address, isConnected } = useAccount()
+  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const [employees, setEmployees] = useState<EmployeeData[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   // Simulate page load
   useEffect(() => {
@@ -26,20 +43,143 @@ export default function ManagerPanel() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Mock data - replace with contract calls
-  const employees = [
-    { address: '0x1234...5678', name: 'Alice', hours: 40, escrow: 137.04 },
-    { address: '0x8765...4321', name: 'Bob', hours: 40, escrow: 82.26 },
-  ]
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null)
+        setSuccess(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error, success])
 
-  const handleApprove = async (address: string) => {
-    // TODO: Call contract approveEscrow() function
-    console.log('Approving escrow for:', address)
+  // Fetch all employees from contract
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const fetchEmployees = async () => {
+      setLoadingEmployees(true)
+      try {
+        // ✅ FETCH FROM REAL CONTRACT
+        const employeeAddresses = await read.getAllEmployees()
+        
+        // Fetch details for each employee
+        const employeePromises = employeeAddresses.map(async (empAddress: string) => {
+          const details = await read.getEmployeeDetails(empAddress)
+          if (details) {
+            return {
+              address: empAddress,
+              name: `${empAddress.slice(0, 6)}...${empAddress.slice(-4)}`,
+              escrowBalance: parseFloat(details.escrowBalance),
+              isActive: details.isActive,
+              isClockedIn: details.isClockedIn,
+            }
+          }
+          return null
+        })
+
+        const employeeData = (await Promise.all(employeePromises)).filter(Boolean) as EmployeeData[]
+        setEmployees(employeeData)
+      } catch (err) {
+        console.error('Failed to fetch employees:', err)
+        setError('Failed to load employee data from contract')
+      } finally {
+        setLoadingEmployees(false)
+      }
+    }
+
+    fetchEmployees()
+    
+    // Refresh every 10 seconds
+    const interval = setInterval(fetchEmployees, 10000)
+    return () => clearInterval(interval)
+  }, [isConnected, address, read])
+
+  const handleApprove = async (employeeAddress: string) => {
+    if (!isConnected) {
+      setError('Please connect your wallet first')
+      return
+    }
+
+    setActionLoading(true)
+    setError(null)
+    try {
+      // ✅ REAL CONTRACT CALL
+      await write.approveEscrow(employeeAddress)
+      setSuccess(`Successfully approved escrow for ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)}`)
+      
+      // Refresh employee list
+      const employeeAddresses = await read.getAllEmployees()
+      const employeePromises = employeeAddresses.map(async (empAddress: string) => {
+        const details = await read.getEmployeeDetails(empAddress)
+        if (details) {
+          return {
+            address: empAddress,
+            name: `${empAddress.slice(0, 6)}...${empAddress.slice(-4)}`,
+            escrowBalance: parseFloat(details.escrowBalance),
+            isActive: details.isActive,
+            isClockedIn: details.isClockedIn,
+          }
+        }
+        return null
+      })
+      const employeeData = (await Promise.all(employeePromises)).filter(Boolean) as EmployeeData[]
+      setEmployees(employeeData)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to approve escrow'
+      console.error('Approve failed:', err)
+      setError(errorMessage)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleApproveAll = async () => {
-    // TODO: Batch approve all employees
-    console.log('Approving all')
+    if (!isConnected) {
+      setError('Please connect your wallet first')
+      return
+    }
+
+    const employeesWithEscrow = employees.filter(emp => emp.escrowBalance > 0)
+    
+    if (employeesWithEscrow.length === 0) {
+      setError('No employees with pending escrow')
+      return
+    }
+
+    setActionLoading(true)
+    setError(null)
+    try {
+      // ✅ REAL CONTRACT CALL - Batch approve
+      const addresses = employeesWithEscrow.map(emp => emp.address)
+      await write.batchApproveEscrow(addresses)
+      setSuccess(`Successfully approved escrow for ${employeesWithEscrow.length} employees!`)
+      
+      // Refresh employee list
+      const employeeAddresses = await read.getAllEmployees()
+      const employeePromises = employeeAddresses.map(async (empAddress: string) => {
+        const details = await read.getEmployeeDetails(empAddress)
+        if (details) {
+          return {
+            address: empAddress,
+            name: `${empAddress.slice(0, 6)}...${empAddress.slice(-4)}`,
+            escrowBalance: parseFloat(details.escrowBalance),
+            isActive: details.isActive,
+            isClockedIn: details.isClockedIn,
+          }
+        }
+        return null
+      })
+      const employeeData = (await Promise.all(employeePromises)).filter(Boolean) as EmployeeData[]
+      setEmployees(employeeData)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to approve all escrow'
+      console.error('Batch approve failed:', err)
+      setError(errorMessage)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   if (isPageLoading) {
@@ -85,6 +225,45 @@ export default function ManagerPanel() {
             <WalletButton />
           </div>
 
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="bg-red-500/20 backdrop-blur-xl border border-red-400/30 p-5 mb-6 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-100 font-medium">{error}</p>
+              </div>
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-500/20 backdrop-blur-xl border border-green-400/30 p-5 mb-6 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-green-100 font-medium">{success}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Connection Required */}
+          {!isConnected && (
+            <div className="bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-red-500/20 backdrop-blur-xl border border-yellow-400/30 rounded-2xl p-8 mb-6 text-center shadow-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-yellow-400/20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-yellow-100 font-bold text-xl mb-2">Wallet Connection Required</p>
+                  <p className="text-yellow-200">Connect your wallet above to manage employee approvals</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-2xl">
@@ -109,9 +288,9 @@ export default function ManagerPanel() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Total Hours</p>
+                  <p className="text-sm text-gray-400">Active Employees</p>
                   <p className="text-3xl font-bold text-white">
-                    {employees.reduce((sum, emp) => sum + emp.hours, 0)}
+                    {loadingEmployees ? '...' : employees.filter(emp => emp.isActive).length}
                   </p>
                 </div>
               </div>
@@ -127,7 +306,7 @@ export default function ManagerPanel() {
                 <div>
                   <p className="text-sm text-gray-400">Total Escrow</p>
                   <p className="text-3xl font-bold text-white">
-                    {employees.reduce((sum, emp) => sum + emp.escrow, 0).toFixed(2)}
+                    {loadingEmployees ? '...' : employees.reduce((sum, emp) => sum + emp.escrowBalance, 0).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -175,13 +354,17 @@ export default function ManagerPanel() {
                         </div>
                       </div>
                       
-                      {/* Hours Badge */}
+                      {/* Status Badge */}
                       <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-400/30 rounded-lg px-3 py-2">
                         <svg className="w-4 h-4 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          {emp.isClockedIn ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          )}
                         </svg>
                         <span className="text-sm font-semibold text-green-300">
-                          {emp.hours} hours this week
+                          {emp.isClockedIn ? 'Clocked In' : 'Clocked Out'}
                         </span>
                       </div>
                     </div>
@@ -190,7 +373,7 @@ export default function ManagerPanel() {
                     <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-sm rounded-xl p-4 border border-yellow-400/30 min-w-[200px]">
                       <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Escrow Amount</p>
                       <p className="text-3xl font-bold text-yellow-300 font-mono">
-                        {emp.escrow.toFixed(2)}
+                        {emp.escrowBalance.toFixed(4)}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">PYUSD</p>
                     </div>
@@ -198,12 +381,26 @@ export default function ManagerPanel() {
                     {/* Approve Button */}
                     <button
                       onClick={() => handleApprove(emp.address)}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transform hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-green-500/50 flex items-center justify-center gap-2 min-w-[140px]"
+                      disabled={actionLoading || emp.escrowBalance <= 0}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-green-500/50 disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2 min-w-[140px]"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Approve
+                      {emp.escrowBalance <= 0 ? (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Approved
+                        </>
+                      ) : actionLoading ? (
+                        'Processing...'
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Approve
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

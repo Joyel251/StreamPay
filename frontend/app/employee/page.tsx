@@ -5,22 +5,22 @@ import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePYUSDtoPHP, usePythPrice, formatPrice } from '@/lib/pyth'
-// import { useContract } from '@/lib/hooks/useContract' // TODO: Uncomment when contract is deployed
+import { useContract } from '@/lib/hooks/useContract' // ✅ NOW USING REAL CONTRACT
 
 // Lazy load heavy components
 const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 /**
- * Employee Dashboard - Complete Implementation
- * - Real-time balance from contract
- * - Clock in/out with contract calls
+ * Employee Dashboard - REAL CONTRACT INTEGRATION ✅
+ * - Real-time balance from deployed StreamingVault
+ * - Clock in/out with actual contract calls
  * - Withdraw with proper validation
  * - Live Pyth price feeds
  */
 
 export default function EmployeeApp() {
   const { address, isConnected } = useAccount()
-  // const { write, read, loading: contractLoading } = useContract() // TODO: Uncomment when contract is deployed
+  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   // State
   const [balance, setBalance] = useState(0)
@@ -56,24 +56,28 @@ export default function EmployeeApp() {
     const fetchBalance = async () => {
       setBalanceLoading(true)
       try {
-        // TODO: Uncomment when contract is deployed
-        // const balanceStr = await read.getEmployeeBalance(address)
-        // const totalBalance = parseFloat(balanceStr)
+        // ✅ FETCH FROM REAL CONTRACT
+        const details = await read.getEmployeeDetails(address)
         
-        // TEMPORARY: Simulate balance for testing Pyth rates
-        const totalBalance = 10.5 // Simulated balance
-        setBalance(totalBalance)
-        setAvailableBalance(totalBalance * 0.7) // 70% available
-        setEscrowBalance(totalBalance * 0.3) // 30% escrow
-        
-        // TODO: Uncomment when contract is deployed
-        // Check if employee is clocked in
-        // const info = await read.getEmployeeInfo(address)
-        // if (info) {
-        //   setIsClockedIn(info.isClockedIn)
-        // }
+        if (details) {
+          const available = parseFloat(details.availableBalance)
+          const escrow = parseFloat(details.escrowBalance)
+          const totalBalance = available + escrow
+          
+          setBalance(totalBalance)
+          setAvailableBalance(available)
+          setEscrowBalance(escrow)
+          setIsClockedIn(details.isClockedIn)
+        } else {
+          // Employee not registered yet
+          setBalance(0)
+          setAvailableBalance(0)
+          setEscrowBalance(0)
+          setIsClockedIn(false)
+        }
       } catch (err) {
         console.error('Failed to fetch balance:', err)
+        setError('Failed to load employee data from contract')
       } finally {
         setBalanceLoading(false)
       }
@@ -82,11 +86,10 @@ export default function EmployeeApp() {
     // Fetch immediately
     fetchBalance()
 
-    // TODO: Re-enable interval when contract is deployed
     // Update every 2 seconds when clocked in, every 5 seconds otherwise
-    // const interval = setInterval(fetchBalance, isClockedIn ? 2000 : 5000)
-    // return () => clearInterval(interval)
-  }, [isConnected, address, isClockedIn])
+    const interval = setInterval(fetchBalance, isClockedIn ? 2000 : 5000)
+    return () => clearInterval(interval)
+  }, [isConnected, address, isClockedIn, read])
 
   // Clear messages after 5 seconds
   useEffect(() => {
@@ -108,12 +111,10 @@ export default function EmployeeApp() {
     setActionLoading(true)
     setError(null)
     try {
-      // TODO: Uncomment when contract is deployed
-      // await write.clockIn()
-      
-      // TEMPORARY: Simulate for testing Pyth rates
-  setIsClockedIn(true)
-  setSuccess('Clocked in successfully. (Simulated - waiting for contract deployment)')
+      // ✅ REAL CONTRACT CALL
+      await write.clockIn()
+      setIsClockedIn(true)
+      setSuccess('Clocked in successfully! Wages are now streaming.')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to clock in. Please try again.'
       console.error('Clock in failed:', err)
@@ -132,12 +133,10 @@ export default function EmployeeApp() {
     setActionLoading(true)
     setError(null)
     try {
-      // TODO: Uncomment when contract is deployed
-      // await write.clockOut()
-      
-      // TEMPORARY: Simulate for testing Pyth rates
-  setIsClockedIn(false)
-  setSuccess('Clocked out successfully. (Simulated - waiting for contract deployment)')
+      // ✅ REAL CONTRACT CALL
+      await write.clockOut()
+      setIsClockedIn(false)
+      setSuccess('Clocked out successfully. Your earnings have been recorded.')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to clock out. Please try again.'
       console.error('Clock out failed:', err)
@@ -167,14 +166,19 @@ export default function EmployeeApp() {
     setActionLoading(true)
     setError(null)
     try {
-      // TODO: Uncomment when contract is deployed
-      // For now, use simple withdrawal (nonce=0, empty signature)
-      // Person A will implement EVVM async nonce executor
-      // await write.withdraw(withdrawAmount, 0, '0x')
-      
-      // TEMPORARY: Simulate for testing Pyth rates
-  setSuccess(`Withdrew ${withdrawAmount} PYUSD successfully. (Simulated - waiting for contract deployment)`)
+      // ✅ REAL CONTRACT CALL
+      await write.withdraw(withdrawAmount)
+      setSuccess(`Successfully withdrew ${withdrawAmount} PYUSD to your wallet!`)
       setWithdrawAmount('')
+      
+      // Refresh balance after withdrawal
+      if (address) {
+        const details = await read.getEmployeeDetails(address)
+        if (details) {
+          setAvailableBalance(parseFloat(details.availableBalance))
+          setBalance(parseFloat(details.availableBalance) + parseFloat(details.escrowBalance))
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Withdrawal failed. Please try again.'
       console.error('Withdrawal failed:', err)

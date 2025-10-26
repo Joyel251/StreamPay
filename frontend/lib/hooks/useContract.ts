@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { BrowserProvider, Contract, parseUnits, formatUnits } from 'ethers'
 import { useAccount } from 'wagmi'
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../contract'
+import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS } from '../contract'
 
 /**
- * Custom hook for StreamingVault contract interactions
- * Wire this up after Person A deploys and provides ABI
+ * 🚀 Custom hook for StreamingVault contract interactions
+ * NOW CONNECTED TO REAL DEPLOYED CONTRACT!
+ * PYUSD uses 6 decimals (not 18)
  */
 
 export function useContract() {
@@ -43,7 +44,7 @@ export function useContract() {
     setLoading(true)
     setError(null)
     try {
-      const tx = await contract.deposit(parseUnits(amount, 18))
+      const tx = await contract.deposit(parseUnits(amount, 6)) // PYUSD = 6 decimals
       await tx.wait()
       return tx
     } catch (err) {
@@ -55,12 +56,12 @@ export function useContract() {
     }
   }
 
-  const addEmployee = async (employeeAddress: string, annualSalary: string) => {
+  const addEmployee = async (employeeAddress: string, annualSalary: string, managerAddress: string) => {
     if (!contract) throw new Error('Contract not initialized')
     setLoading(true)
     setError(null)
     try {
-      const tx = await contract.addEmployee(employeeAddress, parseUnits(annualSalary, 18))
+      const tx = await contract.addEmployee(employeeAddress, parseUnits(annualSalary, 6), managerAddress)
       await tx.wait()
       return tx
     } catch (err) {
@@ -107,13 +108,13 @@ export function useContract() {
     }
   }
 
-  const withdraw = async (amount: string, nonce: number, signature: string) => {
+  const withdraw = async (amount: string) => {
     if (!contract) throw new Error('Contract not initialized')
     setLoading(true)
     setError(null)
     try {
-      // EVVM async nonce withdrawal
-      const tx = await contract.withdraw(parseUnits(amount, 18), nonce, signature)
+      // Simple withdraw (not using EVVM nonces for now)
+      const tx = await contract.withdraw(parseUnits(amount, 6)) // PYUSD = 6 decimals
       await tx.wait()
       return tx
     } catch (err) {
@@ -126,29 +127,33 @@ export function useContract() {
   }
 
   // Read functions
-  const getEmployeeBalance = async (employeeAddress: string): Promise<string> => {
+  const getAvailableBalance = async (employeeAddress: string): Promise<string> => {
     if (!contract) throw new Error('Contract not initialized')
     try {
-      const balance = await contract.getEmployeeBalance(employeeAddress)
-      return formatUnits(balance, 18)
+      const balance = await contract.getAvailableBalance(employeeAddress)
+      return formatUnits(balance, 6) // PYUSD = 6 decimals
     } catch (err) {
-      console.error('Failed to get balance:', err)
+      console.error('Failed to get available balance:', err)
       return '0'
     }
   }
 
-  const getEmployeeInfo = async (employeeAddress: string) => {
+  const getEmployeeDetails = async (employeeAddress: string) => {
     if (!contract) throw new Error('Contract not initialized')
     try {
-      const info = await contract.employees(employeeAddress)
+      const details = await contract.getEmployeeDetails(employeeAddress)
       return {
-        annualSalary: formatUnits(info.annualSalary, 18),
-        isClockedIn: info.isClockedIn,
-        lastClockIn: info.lastClockIn.toString(),
-        totalEarned: formatUnits(info.totalEarned, 18),
+        salaryPerSecond: formatUnits(details.salaryPerSecond, 6),
+        annualSalary: formatUnits(details.annualSalary, 6),
+        availableBalance: formatUnits(details.availableBalance, 6),
+        escrowBalance: formatUnits(details.escrowBalance, 6),
+        totalWithdrawn: formatUnits(details.totalWithdrawn, 6),
+        isActive: details.isActive,
+        isClockedIn: details.isClockedIn,
+        managerAddress: details.managerAddress,
       }
     } catch (err) {
-      console.error('Failed to get employee info:', err)
+      console.error('Failed to get employee details:', err)
       return null
     }
   }
@@ -157,10 +162,55 @@ export function useContract() {
     if (!contract) throw new Error('Contract not initialized')
     try {
       const balance = await contract.getContractBalance()
-      return formatUnits(balance, 18)
+      return formatUnits(balance, 6) // PYUSD = 6 decimals
     } catch (err) {
       console.error('Failed to get contract balance:', err)
       return '0'
+    }
+  }
+
+  const getAllEmployees = async (): Promise<string[]> => {
+    if (!contract) throw new Error('Contract not initialized')
+    try {
+      const employees = await contract.getAllEmployees()
+      return employees
+    } catch (err) {
+      console.error('Failed to get all employees:', err)
+      return []
+    }
+  }
+
+  const approveEscrow = async (employeeAddress: string) => {
+    if (!contract) throw new Error('Contract not initialized')
+    setLoading(true)
+    setError(null)
+    try {
+      const tx = await contract.approveEscrow(employeeAddress)
+      await tx.wait()
+      return tx
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const batchApproveEscrow = async (employeeAddresses: string[]) => {
+    if (!contract) throw new Error('Contract not initialized')
+    setLoading(true)
+    setError(null)
+    try {
+      const tx = await contract.batchApproveEscrow(employeeAddresses)
+      await tx.wait()
+      return tx
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -175,12 +225,15 @@ export function useContract() {
       clockIn,
       clockOut,
       withdraw,
+      approveEscrow,
+      batchApproveEscrow,
     },
     // Read functions
     read: {
-      getEmployeeBalance,
-      getEmployeeInfo,
+      getAvailableBalance,
+      getEmployeeDetails,
       getContractBalance,
+      getAllEmployees,
     },
   }
 }

@@ -1,23 +1,34 @@
 'use client'
 
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { usePYUSDtoPHP, usePythPrice, formatPrice } from '@/lib/pyth'
+import { useContract } from '@/lib/hooks/useContract' // ✅ NOW USING REAL CONTRACT
 
 // Lazy load heavy components
 const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 /**
- * Person B: Employer Dashboard
- * Shows live Pyth exchange rates when depositing PYUSD and adding employees
+ * Employer Dashboard - REAL CONTRACT INTEGRATION ✅
+ * - Deposit PYUSD to vault
+ * - Add employees with annual salary
+ * - Live Pyth price feeds
  */
 
 export default function EmployerDashboard() {
+  const { address, isConnected } = useAccount()
+  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  
   const [depositAmount, setDepositAmount] = useState('')
   const [employeeAddress, setEmployeeAddress] = useState('')
   const [annualSalary, setAnnualSalary] = useState('')
+  const [managerAddress, setManagerAddress] = useState('')
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   // Fetch live Pyth price feeds (updates every 5 seconds)
   const { priceData: pyusdUsdData, loading: pyusdLoading } = usePythPrice('PYUSD/USD')
@@ -31,15 +42,88 @@ export default function EmployerDashboard() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null)
+        setSuccess(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error, success])
+
   const handleDeposit = async () => {
-    // TODO: Call contract deposit() function with PYUSD approval
-    console.log('Depositing:', depositAmount, 'PYUSD')
+    if (!isConnected) {
+      setError('Please connect your wallet first')
+      return
+    }
+
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      setError('Please enter a valid deposit amount')
+      return
+    }
+
+    setActionLoading(true)
+    setError(null)
+    try {
+      // ✅ REAL CONTRACT CALL - Need to approve PYUSD first!
+      // TODO: Add PYUSD approval step
+      await write.deposit(depositAmount)
+      setSuccess(`Successfully deposited ${depositAmount} PYUSD to vault!`)
+      setDepositAmount('')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Deposit failed. Please try again.'
+      console.error('Deposit failed:', err)
+      setError(errorMessage)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleAddEmployee = async () => {
-    // TODO: Call contract addEmployee() function
-    // Annual salary in PYUSD -> convert to per-second rate on-chain
-    console.log('Adding employee:', employeeAddress, annualSalary)
+    if (!isConnected) {
+      setError('Please connect your wallet first')
+      return
+    }
+
+    if (!employeeAddress || !annualSalary || !managerAddress) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    // Validate Ethereum address
+    if (!/^0x[a-fA-F0-9]{40}$/.test(employeeAddress)) {
+      setError('Invalid employee wallet address')
+      return
+    }
+
+    if (!/^0x[a-fA-F0-9]{40}$/.test(managerAddress)) {
+      setError('Invalid manager wallet address')
+      return
+    }
+
+    if (parseFloat(annualSalary) <= 0) {
+      setError('Annual salary must be greater than 0')
+      return
+    }
+
+    setActionLoading(true)
+    setError(null)
+    try {
+      // ✅ REAL CONTRACT CALL
+      await write.addEmployee(employeeAddress, annualSalary, managerAddress)
+      setSuccess(`Successfully added employee ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)} with salary ${annualSalary} PYUSD/year!`)
+      setEmployeeAddress('')
+      setAnnualSalary('')
+      setManagerAddress('')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add employee. Please try again.'
+      console.error('Add employee failed:', err)
+      setError(errorMessage)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   // Calculate equivalent amounts in different currencies
@@ -95,6 +179,45 @@ export default function EmployerDashboard() {
             </div>
             <WalletButton />
           </div>
+
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="bg-red-500/20 backdrop-blur-xl border border-red-400/30 p-5 mb-6 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-100 font-medium">{error}</p>
+              </div>
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-500/20 backdrop-blur-xl border border-green-400/30 p-5 mb-6 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-green-100 font-medium">{success}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Connection Required */}
+          {!isConnected && (
+            <div className="bg-gradient-to-br from-yellow-500/20 via-orange-500/20 to-red-500/20 backdrop-blur-xl border border-yellow-400/30 rounded-2xl p-8 mb-6 text-center shadow-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-yellow-400/20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-yellow-100 font-bold text-xl mb-2">Wallet Connection Required</p>
+                  <p className="text-yellow-200">Connect your wallet above to manage employees and deposits</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Live Exchange Rates Card */}
           <div className="bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 backdrop-blur-xl border border-white/30 rounded-2xl p-6 mb-8 shadow-2xl">
@@ -195,9 +318,10 @@ export default function EmployerDashboard() {
 
                 <button
                   onClick={handleDeposit}
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg font-bold px-6 py-4 rounded-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-blue-500/50"
+                  disabled={!isConnected || actionLoading || !depositAmount || parseFloat(depositAmount) <= 0}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg font-bold px-6 py-4 rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-blue-500/50 disabled:transform-none disabled:shadow-none"
                 >
-                  Deposit to Vault
+                  {actionLoading ? 'Processing...' : 'Deposit to Vault'}
                 </button>
               </div>
             </div>
@@ -228,7 +352,22 @@ export default function EmployerDashboard() {
                     placeholder="0x..."
                     value={employeeAddress}
                     onChange={(e) => setEmployeeAddress(e.target.value)}
-                    className="w-full bg-white/10 border-2 border-white/30 text-white rounded-xl px-4 py-3 font-mono text-sm focus:border-green-400 focus:ring-2 focus:ring-green-400/50 focus:outline-none placeholder-gray-500 transition-all"
+                    disabled={!isConnected || actionLoading}
+                    className="w-full bg-white/10 border-2 border-white/30 text-white rounded-xl px-4 py-3 font-mono text-sm focus:border-green-400 focus:ring-2 focus:ring-green-400/50 focus:outline-none placeholder-gray-500 transition-all disabled:bg-white/5 disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Manager Wallet Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="0x... (who approves escrow)"
+                    value={managerAddress}
+                    onChange={(e) => setManagerAddress(e.target.value)}
+                    disabled={!isConnected || actionLoading}
+                    className="w-full bg-white/10 border-2 border-white/30 text-white rounded-xl px-4 py-3 font-mono text-sm focus:border-green-400 focus:ring-2 focus:ring-green-400/50 focus:outline-none placeholder-gray-500 transition-all disabled:bg-white/5 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -272,10 +411,10 @@ export default function EmployerDashboard() {
 
                 <button
                   onClick={handleAddEmployee}
-                  disabled={!employeeAddress || !annualSalary}
+                  disabled={!isConnected || actionLoading || !employeeAddress || !annualSalary || !managerAddress}
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg font-bold px-6 py-4 rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-green-500/50 disabled:transform-none disabled:shadow-none"
                 >
-                  {!employeeAddress || !annualSalary ? 'Fill in all fields' : 'Add Employee'}
+                  {actionLoading ? 'Processing...' : (!employeeAddress || !annualSalary || !managerAddress ? 'Fill in all fields' : 'Add Employee')}
                 </button>
               </div>
             </div>
