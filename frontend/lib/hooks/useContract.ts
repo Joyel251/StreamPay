@@ -8,6 +8,20 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS, PYUSD_ABI } from '../con
 const SEPOLIA_CHAIN_ID = '0xaa36a7'
 const DEFAULT_SEPOLIA_RPC = 'https://rpc.sepolia.org'
 
+type ProviderRpcError = {
+  message: string
+  code: number
+  data?: unknown
+}
+
+const isProviderRpcError = (error: unknown): error is ProviderRpcError => {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+  const candidate = error as { code?: unknown; message?: unknown }
+  return typeof candidate.code === 'number' && typeof candidate.message === 'string'
+}
+
 /**
  * 🚀 Custom hook for StreamingVault contract interactions
  * NOW CONNECTED TO REAL DEPLOYED CONTRACT!
@@ -56,9 +70,9 @@ export function useContract() {
             console.log('🔁 Switched wallet to Sepolia network')
             await new Promise(resolve => setTimeout(resolve, 500))
             provider = new BrowserProvider(window.ethereum)
-          } catch (switchError: any) {
+          } catch (switchError: unknown) {
             console.error('❌ Failed to switch network:', switchError)
-            if (switchError?.code === 4902) {
+            if (isProviderRpcError(switchError) && switchError.code === 4902) {
               try {
                 const rpcUrls: string[] = []
                 if (process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) {
@@ -77,7 +91,7 @@ export function useContract() {
                 console.log('🆕 Added Sepolia network to wallet')
                 await new Promise(resolve => setTimeout(resolve, 500))
                 provider = new BrowserProvider(window.ethereum)
-              } catch (addError) {
+              } catch (addError: unknown) {
                 console.error('❌ Failed to add Sepolia network:', addError)
                 setContract(null)
                 setPyusdContract(null)

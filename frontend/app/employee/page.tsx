@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useAccount } from 'wagmi'
 import WalletButton from '@/components/WalletButton'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -30,6 +30,7 @@ export default function EmployeeApp() {
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [currency, setCurrency] = useState<'PYUSD' | 'USD' | 'PHP'>('PYUSD')
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const initialBalanceFetch = useRef(false)
   
   // Loading & error states
   const [balanceLoading, setBalanceLoading] = useState(false)
@@ -56,12 +57,14 @@ export default function EmployeeApp() {
       setAvailableBalance(0)
       setEscrowBalance(0)
       setIsClockedIn(false)
+      initialBalanceFetch.current = false
+      setBalanceLoading(false)
       return
     }
 
     const fetchBalance = async () => {
       // Only show loading on first fetch
-      if (balance === 0) {
+      if (!initialBalanceFetch.current) {
         setBalanceLoading(true)
       }
       
@@ -98,7 +101,8 @@ export default function EmployeeApp() {
           setError('Failed to load employee data from contract')
         }
       } finally {
-        if (balance === 0) {
+        if (!initialBalanceFetch.current) {
+          initialBalanceFetch.current = true
           setBalanceLoading(false)
         }
       }
