@@ -373,6 +373,28 @@ export default function EmployeeApp() {
               <div className="flex-1">
                 <p className="text-blue-100 font-bold text-lg mb-1">Initializing Smart Contract...</p>
                 <p className="text-blue-200 text-sm">Connecting to StreamingVault on Sepolia network. This may take a few seconds.</p>
+                <p className="text-blue-300 text-xs mt-2">Connected wallet: {address?.slice(0, 10)}...{address?.slice(-8)}</p>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-blue-500/30 hover:bg-blue-500/50 border border-blue-400 text-blue-100 px-4 py-2 rounded-lg font-semibold transition-all"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Success Initialized Banner */}
+        {isConnected && isInitialized && !actionLoading && (
+          <div className="bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 backdrop-blur-xl border border-green-400/30 rounded-xl p-4 mb-6 shadow-lg">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-green-100 font-semibold text-sm">Contract Ready</p>
+                <p className="text-green-200/70 text-xs">Connected to {address?.slice(0, 6)}...{address?.slice(-4)}</p>
               </div>
             </div>
           </div>
