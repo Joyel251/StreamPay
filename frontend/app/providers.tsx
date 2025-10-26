@@ -1,20 +1,22 @@
 'use client'
 
-import { WagmiProvider, createConfig, http } from 'wagmi'
+import { WagmiProvider, http, createConfig } from 'wagmi'
 import { sepolia } from 'wagmi/chains'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit'
 
+const rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.gateway.tenderly.co'
+
 const config = createConfig(
   getDefaultConfig({
-    chains: [sepolia],
-    transports: {
-      [sepolia.id]: http(),
-    },
-    walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
     appName: 'StreamPay',
     appDescription: 'Real-time wage streaming protocol',
     appUrl: 'https://streampay.app',
+    chains: [sepolia],
+    transports: {
+      [sepolia.id]: http(rpcUrl),
+    },
+    walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
   })
 )
 
@@ -24,7 +26,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider>
+        <ConnectKitProvider
+          options={{
+            initialChainId: sepolia.id,
+            enforceSupportedChains: true,
+            hideNoWalletCTA: false,
+          }}
+        >
           {children}
         </ConnectKitProvider>
       </QueryClientProvider>

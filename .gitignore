@@ -25,6 +25,9 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
+frontend/.env
+frontend/.env.local
 
 # IDE
 .vscode/
@@ -46,4 +49,8 @@ typechain-types/
 *.tsbuildinfo
 .eslintcache
 
+# Documentation (except README.md)
 *.md
+!README.md
+test-pyth-feeds.js
+.vercel
