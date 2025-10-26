@@ -20,26 +20,53 @@ export function useContract() {
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
+    // Reset state when disconnected
     if (!isConnected || !window.ethereum || !CONTRACT_ADDRESS) {
+      console.log('⚠️ Resetting contract state - wallet disconnected or missing config')
       setContract(null)
       setPyusdContract(null)
       setIsInitialized(false)
+      setError(null)
       return
     }
 
+    // Reset initialization state when address changes
+    setIsInitialized(false)
+    setError(null)
+
     const initContract = async () => {
       try {
+        console.log('🔄 Initializing contract for address:', address)
+        
+        // Small delay to ensure wallet is fully ready
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
         const provider = new BrowserProvider(window.ethereum)
         const signer = await provider.getSigner()
+        
+        // Verify we got the correct signer address
+        const signerAddress = await signer.getAddress()
+        console.log('👤 Signer address:', signerAddress)
+        
+        if (signerAddress.toLowerCase() !== address?.toLowerCase()) {
+          console.warn('⚠️ Signer address mismatch, retrying...')
+          // Retry once more
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const newSigner = await provider.getSigner()
+          const newSignerAddress = await newSigner.getAddress()
+          console.log('👤 Retry signer address:', newSignerAddress)
+        }
+        
         const contractInstance = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
         const pyusdInstance = new Contract(PYUSD_ADDRESS, PYUSD_ABI, signer)
+        
         setContract(contractInstance)
         setPyusdContract(pyusdInstance)
         setIsInitialized(true)
-        console.log('✅ Contract initialized successfully')
+        console.log('✅ Contract initialized successfully for', signerAddress)
       } catch (err) {
-        console.error('Failed to initialize contract:', err)
-        setError('Failed to connect to contract')
+        console.error('❌ Failed to initialize contract:', err)
+        setError('Failed to connect to contract. Please refresh and try again.')
         setIsInitialized(false)
       }
     }
