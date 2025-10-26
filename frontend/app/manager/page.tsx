@@ -26,7 +26,7 @@ interface EmployeeData {
 
 export default function ManagerPanel() {
   const { address, isConnected } = useAccount()
-  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
@@ -56,11 +56,20 @@ export default function ManagerPanel() {
 
   // Fetch all employees from contract
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !address) {
+      setEmployees([])
+      return
+    }
 
     const fetchEmployees = async () => {
       setLoadingEmployees(true)
       try {
+        // Check if read functions are available
+        if (!read.getAllEmployees || !read.getEmployeeDetails) {
+          console.log('Contract methods not ready yet')
+          return
+        }
+
         // ✅ FETCH FROM REAL CONTRACT
         const employeeAddresses = await read.getAllEmployees()
         
@@ -83,7 +92,10 @@ export default function ManagerPanel() {
         setEmployees(employeeData)
       } catch (err) {
         console.error('Failed to fetch employees:', err)
-        setError('Failed to load employee data from contract')
+        // Only show error if it's not a "not initialized" error
+        if (err instanceof Error && !err.message.includes('not initialized')) {
+          setError('Failed to load employee data from contract')
+        }
       } finally {
         setLoadingEmployees(false)
       }

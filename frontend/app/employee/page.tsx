@@ -20,7 +20,7 @@ const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 export default function EmployeeApp() {
   const { address, isConnected } = useAccount()
-  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   // State
   const [balance, setBalance] = useState(0)
@@ -51,11 +51,23 @@ export default function EmployeeApp() {
 
   // Fetch employee balance from contract (real-time updates)
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !address) {
+      setBalance(0)
+      setAvailableBalance(0)
+      setEscrowBalance(0)
+      setIsClockedIn(false)
+      return
+    }
 
     const fetchBalance = async () => {
       setBalanceLoading(true)
       try {
+        // Check if read function is available
+        if (!read.getEmployeeDetails) {
+          console.log('Contract methods not ready yet')
+          return
+        }
+
         // ✅ FETCH FROM REAL CONTRACT
         const details = await read.getEmployeeDetails(address)
         
@@ -77,7 +89,10 @@ export default function EmployeeApp() {
         }
       } catch (err) {
         console.error('Failed to fetch balance:', err)
-        setError('Failed to load employee data from contract')
+        // Only show error if it's not a "not initialized" error
+        if (err instanceof Error && !err.message.includes('not initialized')) {
+          setError('Failed to load employee data from contract')
+        }
       } finally {
         setBalanceLoading(false)
       }

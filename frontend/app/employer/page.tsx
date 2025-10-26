@@ -19,7 +19,7 @@ const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 export default function EmployerDashboard() {
   const { address, isConnected } = useAccount()
-  const { write, read, loading: contractLoading } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   const [depositAmount, setDepositAmount] = useState('')
   const [employeeAddress, setEmployeeAddress] = useState('')
@@ -46,10 +46,20 @@ export default function EmployerDashboard() {
 
   // Fetch balances
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !address) {
+      setWalletBalance('0')
+      setVaultBalance('0')
+      return
+    }
 
     const fetchBalances = async () => {
       try {
+        // Check if read functions are available
+        if (!read.getPYUSDBalance || !read.getVaultBalance) {
+          console.log('Contract methods not ready yet')
+          return
+        }
+
         const [wallet, vault] = await Promise.all([
           read.getPYUSDBalance(address),
           read.getVaultBalance()
