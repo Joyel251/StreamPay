@@ -19,7 +19,7 @@ const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 export default function EmployerDashboard() {
   const { address, isConnected } = useAccount()
-  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read, isInitialized } = useContract() // ✅ CONNECTED TO REAL CONTRACT with initialization tracking
   
   const [depositAmount, setDepositAmount] = useState('')
   const [employeeAddress, setEmployeeAddress] = useState('')
@@ -107,7 +107,7 @@ export default function EmployerDashboard() {
     }
 
     // Check if contract is initialized
-    if (!write.approvePYUSD || !write.deposit) {
+    if (!isInitialized || !write.approvePYUSD || !write.deposit) {
       setError('Contract not initialized. Please wait and try again.')
       return
     }
@@ -117,13 +117,15 @@ export default function EmployerDashboard() {
     try {
       // Step 1: Approve PYUSD
       setSuccess('Step 1/2: Approving PYUSD...')
-      await write.approvePYUSD(depositAmount)
+      const approveTx = await write.approvePYUSD(depositAmount)
+      await approveTx.wait()
       
       // Step 2: Deposit to vault
       setSuccess('Step 2/2: Depositing to vault...')
-      await write.deposit(depositAmount)
+      const depositTx = await write.deposit(depositAmount)
+      await depositTx.wait()
       
-      setSuccess(`Successfully deposited ${depositAmount} PYUSD to vault!`)
+      setSuccess(`✅ Successfully deposited ${depositAmount} PYUSD to vault! Tx: ${depositTx.hash.slice(0, 10)}...`)
       setDepositAmount('')
       
       // Refresh balances
@@ -170,7 +172,7 @@ export default function EmployerDashboard() {
     }
 
     // Check if contract is initialized
-    if (!write.addEmployee) {
+    if (!isInitialized || !write.addEmployee) {
       setError('Contract not initialized. Please wait and try again.')
       return
     }
@@ -178,9 +180,13 @@ export default function EmployerDashboard() {
     setActionLoading(true)
     setError(null)
     try {
-      // ✅ REAL CONTRACT CALL
-      await write.addEmployee(employeeAddress, annualSalary, managerAddress)
-      setSuccess(`Successfully added employee ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)} with salary ${annualSalary} PYUSD/year!`)
+      // ✅ REAL CONTRACT CALL with transaction confirmation
+      const tx = await write.addEmployee(employeeAddress, annualSalary, managerAddress)
+      
+      // Wait for transaction confirmation
+      await tx.wait()
+      
+      setSuccess(`✅ Successfully added employee ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)} with salary ${annualSalary} PYUSD/year! Tx: ${tx.hash.slice(0, 10)}...`)
       setEmployeeAddress('')
       setAnnualSalary('')
       setManagerAddress('')

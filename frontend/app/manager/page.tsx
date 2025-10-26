@@ -26,7 +26,7 @@ interface EmployeeData {
 
 export default function ManagerPanel() {
   const { address, isConnected } = useAccount()
-  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read, isInitialized } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
@@ -57,7 +57,7 @@ export default function ManagerPanel() {
 
   // Fetch all employees from contract
   useEffect(() => {
-    if (!isConnected || !address) {
+    if (!isConnected || !address || !isInitialized) {
       setEmployees([])
       setInitialLoad(false)
       return
@@ -115,10 +115,10 @@ export default function ManagerPanel() {
 
     fetchEmployees()
     
-    // Refresh every 10 seconds
-    const interval = setInterval(fetchEmployees, 10000)
+    // Refresh every 15 seconds (less frequent to reduce load)
+    const interval = setInterval(fetchEmployees, 15000)
     return () => clearInterval(interval)
-  }, [isConnected, address, read, initialLoad])
+  }, [isConnected, address, read, initialLoad, isInitialized])
 
   const handleApprove = async (employeeAddress: string) => {
     if (!isConnected) {
@@ -127,7 +127,7 @@ export default function ManagerPanel() {
     }
 
     // Check if contract is initialized
-    if (!write.approveEscrow) {
+    if (!isInitialized || !write.approveEscrow) {
       setError('Contract not initialized. Please wait and try again.')
       return
     }
@@ -135,9 +135,13 @@ export default function ManagerPanel() {
     setActionLoading(true)
     setError(null)
     try {
-      // ✅ REAL CONTRACT CALL
-      await write.approveEscrow(employeeAddress)
-      setSuccess(`Successfully approved escrow for ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)}`)
+      // ✅ REAL CONTRACT CALL with transaction confirmation
+      const tx = await write.approveEscrow(employeeAddress)
+      
+      // Wait for transaction confirmation
+      await tx.wait()
+      
+      setSuccess(`✅ Successfully approved escrow for ${employeeAddress.slice(0, 6)}...${employeeAddress.slice(-4)}! Tx: ${tx.hash.slice(0, 10)}...`)
       
       // Refresh employee list
       const employeeAddresses = await read.getAllEmployees()
@@ -179,7 +183,7 @@ export default function ManagerPanel() {
     }
 
     // Check if contract is initialized
-    if (!write.batchApproveEscrow) {
+    if (!isInitialized || !write.batchApproveEscrow) {
       setError('Contract not initialized. Please wait and try again.')
       return
     }
@@ -187,10 +191,14 @@ export default function ManagerPanel() {
     setActionLoading(true)
     setError(null)
     try {
-      // ✅ REAL CONTRACT CALL - Batch approve
+      // ✅ REAL CONTRACT CALL - Batch approve with transaction confirmation
       const addresses = employeesWithEscrow.map(emp => emp.address)
-      await write.batchApproveEscrow(addresses)
-      setSuccess(`Successfully approved escrow for ${employeesWithEscrow.length} employees!`)
+      const tx = await write.batchApproveEscrow(addresses)
+      
+      // Wait for transaction confirmation
+      await tx.wait()
+      
+      setSuccess(`✅ Successfully approved escrow for ${employeesWithEscrow.length} employees! Tx: ${tx.hash.slice(0, 10)}...`)
       
       // Refresh employee list
       const employeeAddresses = await read.getAllEmployees()

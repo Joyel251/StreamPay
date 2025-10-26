@@ -17,11 +17,13 @@ export function useContract() {
   const [pyusdContract, setPyusdContract] = useState<Contract | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     if (!isConnected || !window.ethereum || !CONTRACT_ADDRESS) {
       setContract(null)
       setPyusdContract(null)
+      setIsInitialized(false)
       return
     }
 
@@ -33,9 +35,12 @@ export function useContract() {
         const pyusdInstance = new Contract(PYUSD_ADDRESS, PYUSD_ABI, signer)
         setContract(contractInstance)
         setPyusdContract(pyusdInstance)
+        setIsInitialized(true)
+        console.log('✅ Contract initialized successfully')
       } catch (err) {
         console.error('Failed to initialize contract:', err)
         setError('Failed to connect to contract')
+        setIsInitialized(false)
       }
     }
 
@@ -261,6 +266,7 @@ export function useContract() {
     contract,
     loading,
     error,
+    isInitialized,
     // Employer write functions
     write: {
       approvePYUSD,

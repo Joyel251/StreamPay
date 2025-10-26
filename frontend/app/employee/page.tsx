@@ -20,7 +20,7 @@ const GradientBlinds = lazy(() => import('@/components/GradientBlinds'))
 
 export default function EmployeeApp() {
   const { address, isConnected } = useAccount()
-  const { write, read } = useContract() // ✅ CONNECTED TO REAL CONTRACT
+  const { write, read, isInitialized } = useContract() // ✅ CONNECTED TO REAL CONTRACT
   
   // State
   const [balance, setBalance] = useState(0)
@@ -51,7 +51,7 @@ export default function EmployeeApp() {
 
   // Fetch employee balance from contract (real-time updates)
   useEffect(() => {
-    if (!isConnected || !address) {
+    if (!isConnected || !address || !isInitialized) {
       setBalance(0)
       setAvailableBalance(0)
       setEscrowBalance(0)
@@ -60,7 +60,11 @@ export default function EmployeeApp() {
     }
 
     const fetchBalance = async () => {
-      setBalanceLoading(true)
+      // Only show loading on first fetch
+      if (balance === 0) {
+        setBalanceLoading(true)
+      }
+      
       try {
         // Check if read function is available
         if (!read.getEmployeeDetails) {
@@ -94,17 +98,19 @@ export default function EmployeeApp() {
           setError('Failed to load employee data from contract')
         }
       } finally {
-        setBalanceLoading(false)
+        if (balance === 0) {
+          setBalanceLoading(false)
+        }
       }
     }
 
     // Fetch immediately
     fetchBalance()
 
-    // Update every 2 seconds when clocked in, every 5 seconds otherwise
-    const interval = setInterval(fetchBalance, isClockedIn ? 2000 : 5000)
+    // Update every 5 seconds when clocked in, every 10 seconds otherwise  
+    const interval = setInterval(fetchBalance, isClockedIn ? 5000 : 10000)
     return () => clearInterval(interval)
-  }, [isConnected, address, isClockedIn, read])
+  }, [isConnected, address, isClockedIn, read, isInitialized])
 
   // Clear messages after 5 seconds
   useEffect(() => {
@@ -124,8 +130,8 @@ export default function EmployeeApp() {
     }
 
     // Check if contract is initialized
-    if (!write.clockIn) {
-      setError('Contract not initialized. Please wait and try again.')
+    if (!isInitialized || !write.clockIn) {
+      setError('Contract not initialized. Please refresh the page and try again.')
       return
     }
 
@@ -133,9 +139,14 @@ export default function EmployeeApp() {
     setError(null)
     try {
       // ✅ REAL CONTRACT CALL
-      await write.clockIn()
+      const tx = await write.clockIn()
+      setSuccess('Transaction submitted! Waiting for confirmation...')
+      
+      // Wait for confirmation
+      await tx.wait()
+      
       setIsClockedIn(true)
-      setSuccess('Clocked in successfully! Wages are now streaming.')
+      setSuccess(`✅ Clocked in successfully! Tx: ${tx.hash.slice(0, 10)}...`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to clock in. Please try again.'
       console.error('Clock in failed:', err)
@@ -152,8 +163,8 @@ export default function EmployeeApp() {
     }
 
     // Check if contract is initialized
-    if (!write.clockOut) {
-      setError('Contract not initialized. Please wait and try again.')
+    if (!isInitialized || !write.clockOut) {
+      setError('Contract not initialized. Please refresh the page and try again.')
       return
     }
 
@@ -161,9 +172,14 @@ export default function EmployeeApp() {
     setError(null)
     try {
       // ✅ REAL CONTRACT CALL
-      await write.clockOut()
+      const tx = await write.clockOut()
+      setSuccess('Transaction submitted! Waiting for confirmation...')
+      
+      // Wait for confirmation
+      await tx.wait()
+      
       setIsClockedIn(false)
-      setSuccess('Clocked out successfully. Your earnings have been recorded.')
+      setSuccess(`✅ Clocked out successfully! Tx: ${tx.hash.slice(0, 10)}...`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to clock out. Please try again.'
       console.error('Clock out failed:', err)
@@ -191,8 +207,8 @@ export default function EmployeeApp() {
     }
 
     // Check if contract is initialized
-    if (!write.withdraw) {
-      setError('Contract not initialized. Please wait and try again.')
+    if (!isInitialized || !write.withdraw) {
+      setError('Contract not initialized. Please refresh the page and try again.')
       return
     }
 
@@ -200,8 +216,13 @@ export default function EmployeeApp() {
     setError(null)
     try {
       // ✅ REAL CONTRACT CALL
-      await write.withdraw(withdrawAmount)
-      setSuccess(`Successfully withdrew ${withdrawAmount} PYUSD to your wallet!`)
+      const tx = await write.withdraw(withdrawAmount)
+      setSuccess('Transaction submitted! Waiting for confirmation...')
+      
+      // Wait for confirmation
+      await tx.wait()
+      
+      setSuccess(`✅ Withdrawal successful! Tx: ${tx.hash.slice(0, 10)}...`)
       setWithdrawAmount('')
       
       // Refresh balance after withdrawal
@@ -640,6 +661,51 @@ export default function EmployeeApp() {
                 </svg>
                 Available: {formatPrice(availableBalance, 4)} PYUSD
               </p>
+              
+              {/* Escrow Split Preview */}
+              {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+                <div className="mt-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-sm border border-blue-400/30 rounded-xl p-4">
+                  <p className="text-xs text-gray-300 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-semibold">Withdrawal Breakdown:</span>
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-green-500/20 border border-green-400/30 rounded-lg p-3">
+                      <span className="text-sm text-gray-300 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        To Your Wallet (70%)
+                      </span>
+                      <span className="font-bold text-green-300 font-mono">
+                        {formatPrice(parseFloat(withdrawAmount) * 0.7, 4)} PYUSD
+                        <span className="text-xs text-gray-400 ml-2">
+                          (≈ ₱{formatPrice(parseFloat(withdrawAmount) * 0.7 * pyusdPhpRate, 2)})
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-yellow-500/20 border border-yellow-400/30 rounded-lg p-3">
+                      <span className="text-sm text-gray-300 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        To Escrow (30%)
+                      </span>
+                      <span className="font-bold text-yellow-300 font-mono">
+                        {formatPrice(parseFloat(withdrawAmount) * 0.3, 4)} PYUSD
+                        <span className="text-xs text-gray-400 ml-2">
+                          (≈ ₱{formatPrice(parseFloat(withdrawAmount) * 0.3 * pyusdPhpRate, 2)})
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3 italic">
+                    💡 Note: 30% of withdrawn amount goes to escrow for manager approval
+                  </p>
+                </div>
+              )}
             </div>
             
             <button
