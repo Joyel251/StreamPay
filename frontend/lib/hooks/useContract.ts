@@ -5,6 +5,9 @@ import { BrowserProvider, Contract, parseUnits, formatUnits } from 'ethers'
 import { useAccount } from 'wagmi'
 import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS, PYUSD_ABI } from '../contract'
 
+const SEPOLIA_CHAIN_ID = '0xaa36a7'
+const DEFAULT_SEPOLIA_RPC = 'https://rpc.sepolia.org'
+
 /**
  * 🚀 Custom hook for StreamingVault contract interactions
  * NOW CONNECTED TO REAL DEPLOYED CONTRACT!
@@ -40,8 +43,56 @@ export function useContract() {
         
         // Small delay to ensure wallet is fully ready
         await new Promise(resolve => setTimeout(resolve, 500))
-        
-        const provider = new BrowserProvider(window.ethereum)
+
+        let provider = new BrowserProvider(window.ethereum)
+
+        const currentChainId = await provider.send('eth_chainId', [])
+        console.log('🌐 Current chain:', currentChainId)
+
+        if (currentChainId !== SEPOLIA_CHAIN_ID) {
+          console.warn(`⚠️ Wallet on wrong network (${currentChainId}). Requesting Sepolia (${SEPOLIA_CHAIN_ID})`)
+          try {
+            await provider.send('wallet_switchEthereumChain', [{ chainId: SEPOLIA_CHAIN_ID }])
+            console.log('🔁 Switched wallet to Sepolia network')
+            await new Promise(resolve => setTimeout(resolve, 500))
+            provider = new BrowserProvider(window.ethereum)
+          } catch (switchError: any) {
+            console.error('❌ Failed to switch network:', switchError)
+            if (switchError?.code === 4902) {
+              try {
+                const rpcUrls: string[] = []
+                if (process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) {
+                  rpcUrls.push(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL)
+                }
+                rpcUrls.push(DEFAULT_SEPOLIA_RPC)
+
+                await provider.send('wallet_addEthereumChain', [{
+                  chainId: SEPOLIA_CHAIN_ID,
+                  chainName: 'Sepolia Test Network',
+                  nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
+                  rpcUrls,
+                  blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                }])
+
+                console.log('🆕 Added Sepolia network to wallet')
+                await new Promise(resolve => setTimeout(resolve, 500))
+                provider = new BrowserProvider(window.ethereum)
+              } catch (addError) {
+                console.error('❌ Failed to add Sepolia network:', addError)
+                setContract(null)
+                setPyusdContract(null)
+                setError('Please add the Sepolia test network to your wallet and try again.')
+                return
+              }
+            } else {
+              setContract(null)
+              setPyusdContract(null)
+              setError('Please switch your wallet to the Sepolia test network to use StreamPay.')
+              return
+            }
+          }
+        }
+
         const signer = await provider.getSigner()
         
         // Verify we got the correct signer address
