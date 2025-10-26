@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserProvider, Contract, parseUnits, formatUnits } from 'ethers'
 import { useAccount } from 'wagmi'
-import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS } from '../contract'
+import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS, PYUSD_ABI } from '../contract'
 
 /**
  * 🚀 Custom hook for StreamingVault contract interactions
@@ -14,12 +14,14 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI, PYUSD_ADDRESS } from '../contract'
 export function useContract() {
   const { address, isConnected } = useAccount()
   const [contract, setContract] = useState<Contract | null>(null)
+  const [pyusdContract, setPyusdContract] = useState<Contract | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isConnected || !window.ethereum || !CONTRACT_ADDRESS) {
       setContract(null)
+      setPyusdContract(null)
       return
     }
 
@@ -28,7 +30,9 @@ export function useContract() {
         const provider = new BrowserProvider(window.ethereum)
         const signer = await provider.getSigner()
         const contractInstance = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+        const pyusdInstance = new Contract(PYUSD_ADDRESS, PYUSD_ABI, signer)
         setContract(contractInstance)
+        setPyusdContract(pyusdInstance)
       } catch (err) {
         console.error('Failed to initialize contract:', err)
         setError('Failed to connect to contract')
@@ -39,6 +43,23 @@ export function useContract() {
   }, [isConnected, address])
 
   // Employer functions
+  const approvePYUSD = async (amount: string) => {
+    if (!pyusdContract) throw new Error('PYUSD contract not initialized')
+    setLoading(true)
+    setError(null)
+    try {
+      const tx = await pyusdContract.approve(CONTRACT_ADDRESS, parseUnits(amount, 6))
+      await tx.wait()
+      return tx
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const deposit = async (amount: string) => {
     if (!contract) throw new Error('Contract not initialized')
     setLoading(true)
@@ -53,6 +74,28 @@ export function useContract() {
       throw err
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getPYUSDBalance = async (walletAddress: string) => {
+    if (!pyusdContract) throw new Error('PYUSD contract not initialized')
+    try {
+      const balance = await pyusdContract.balanceOf(walletAddress)
+      return formatUnits(balance, 6)
+    } catch (err) {
+      console.error('Failed to get PYUSD balance:', err)
+      return '0'
+    }
+  }
+
+  const getVaultBalance = async () => {
+    if (!contract) throw new Error('Contract not initialized')
+    try {
+      const balance = await contract.getContractBalance()
+      return formatUnits(balance, 6)
+    } catch (err) {
+      console.error('Failed to get vault balance:', err)
+      return '0'
     }
   }
 
@@ -220,6 +263,7 @@ export function useContract() {
     error,
     // Employer write functions
     write: {
+      approvePYUSD,
       deposit,
       addEmployee,
       clockIn,
@@ -234,6 +278,8 @@ export function useContract() {
       getEmployeeDetails,
       getContractBalance,
       getAllEmployees,
+      getPYUSDBalance,
+      getVaultBalance,
     },
   }
 }

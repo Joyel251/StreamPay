@@ -29,6 +29,8 @@ export default function EmployerDashboard() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [walletBalance, setWalletBalance] = useState<string>('0')
+  const [vaultBalance, setVaultBalance] = useState<string>('0')
 
   // Fetch live Pyth price feeds (updates every 5 seconds)
   const { priceData: pyusdUsdData, loading: pyusdLoading } = usePythPrice('PYUSD/USD')
@@ -41,6 +43,28 @@ export default function EmployerDashboard() {
     }, 1500)
     return () => clearTimeout(timer)
   }, [])
+
+  // Fetch balances
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const fetchBalances = async () => {
+      try {
+        const [wallet, vault] = await Promise.all([
+          read.getPYUSDBalance(address),
+          read.getVaultBalance()
+        ])
+        setWalletBalance(wallet)
+        setVaultBalance(vault)
+      } catch (err) {
+        console.error('Failed to fetch balances:', err)
+      }
+    }
+
+    fetchBalances()
+    const interval = setInterval(fetchBalances, 10000) // Refresh every 10s
+    return () => clearInterval(interval)
+  }, [isConnected, address, read])
 
   // Clear messages after 5 seconds
   useEffect(() => {
@@ -64,14 +88,35 @@ export default function EmployerDashboard() {
       return
     }
 
+    const amount = parseFloat(depositAmount)
+    const balance = parseFloat(walletBalance)
+    
+    if (amount > balance) {
+      setError(`Insufficient balance. You have ${walletBalance} PYUSD`)
+      return
+    }
+
     setActionLoading(true)
     setError(null)
     try {
-      // ✅ REAL CONTRACT CALL - Need to approve PYUSD first!
-      // TODO: Add PYUSD approval step
+      // Step 1: Approve PYUSD
+      setSuccess('Step 1/2: Approving PYUSD...')
+      await write.approvePYUSD(depositAmount)
+      
+      // Step 2: Deposit to vault
+      setSuccess('Step 2/2: Depositing to vault...')
       await write.deposit(depositAmount)
+      
       setSuccess(`Successfully deposited ${depositAmount} PYUSD to vault!`)
       setDepositAmount('')
+      
+      // Refresh balances
+      const [wallet, vault] = await Promise.all([
+        read.getPYUSDBalance(address!),
+        read.getVaultBalance()
+      ])
+      setWalletBalance(wallet)
+      setVaultBalance(vault)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Deposit failed. Please try again.'
       console.error('Deposit failed:', err)
@@ -284,6 +329,20 @@ export default function EmployerDashboard() {
               </div>
               
               <div className="p-6 space-y-4">
+                {/* Balance Display */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl p-4">
+                    <p className="text-xs text-green-300 mb-1 font-medium">Your Wallet</p>
+                    <p className="text-2xl font-bold text-white font-mono">{parseFloat(walletBalance).toFixed(2)}</p>
+                    <p className="text-xs text-green-200 mt-1">PYUSD</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30 rounded-xl p-4">
+                    <p className="text-xs text-blue-300 mb-1 font-medium">Vault Balance</p>
+                    <p className="text-2xl font-bold text-white font-mono">{parseFloat(vaultBalance).toFixed(2)}</p>
+                    <p className="text-xs text-blue-200 mt-1">PYUSD</p>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Amount (PYUSD)
